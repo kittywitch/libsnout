@@ -1612,36 +1612,15 @@ impl SnoutOutputFields {
     }
 }
 
-/// Create a new output with the given destination address.
+/// Create a new output.
 ///
-/// `destination` is a null-terminated string like "127.0.0.1:9000".
-/// Returns null if the socket could not be bound or the address could not be resolved.
-/// See [`snout_last_error`] for details.
+/// You need to call [`snout_output_set_destination`] to set the destination address.
+/// The resulting object is owned by the caller and must be freed with [`snout_output_free`].
 #[unsafe(no_mangle)]
-pub extern "C" fn snout_output_new(destination: *const c_char) -> *mut Output {
+pub extern "C" fn snout_output_new() -> *mut Output {
     clear_last_error();
 
-    if destination.is_null() {
-        set_null_pointer_error();
-        return std::ptr::null_mut();
-    }
-
-    let destination = unsafe { std::ffi::CStr::from_ptr(destination) };
-    let destination = match destination.to_str() {
-        Ok(s) => s,
-        Err(e) => {
-            set_utf8_error(e);
-            return std::ptr::null_mut();
-        }
-    };
-
-    match Output::new(destination) {
-        Ok(output) => Box::into_raw(Box::new(output)),
-        Err(e) => {
-            set_last_error(e);
-            std::ptr::null_mut()
-        }
-    }
+    Box::into_raw(Box::new(Output::new()))
 }
 
 /// Free an output.
@@ -1660,7 +1639,7 @@ pub extern "C" fn snout_output_free(output: *mut Output) {
 
 /// Set the destination address of the output.
 ///
-/// `destination` is a null-terminated string like "127.0.0.1:9000".
+/// `destination` is a null-terminated string like "127.0.0.1:9400".
 #[unsafe(no_mangle)]
 pub extern "C" fn snout_output_set_destination(output: *mut Output, destination: *const c_char) {
     clear_last_error();
@@ -1743,6 +1722,8 @@ pub extern "C" fn snout_output_flush(output: *mut Output) {
 ///
 /// This can be used for direct access to the transport and emitters.
 /// Pointers are valid until [`snout_output_free`] is called.
+///
+/// The transport pointer is null if no destination is set.
 #[unsafe(no_mangle)]
 pub extern "C" fn snout_output_fields(output: *mut Output) -> SnoutOutputFields {
     clear_last_error();
@@ -1754,8 +1735,14 @@ pub extern "C" fn snout_output_fields(output: *mut Output) -> SnoutOutputFields 
 
     let output = unsafe { &mut *output };
 
+    let transport = output
+        .transport
+        .as_mut()
+        .map(|t| t as *mut OscTransport)
+        .unwrap_or(std::ptr::null_mut());
+
     SnoutOutputFields {
-        transport: &mut output.transport,
+        transport,
         babble: &mut output.babble,
         etvr: &mut output.etvr,
     }

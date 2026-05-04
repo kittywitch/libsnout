@@ -7,42 +7,57 @@ use crate::{
 };
 
 pub struct Output {
-    pub transport: OscTransport,
+    pub transport: Option<OscTransport>,
     pub babble: BabbleEmitter,
     pub etvr: EtvrEmitter,
 }
 
 impl Output {
-    pub fn new(destination: impl ToSocketAddrs) -> Result<Self, TransportError> {
-        Ok(Self {
-            transport: OscTransport::udp(destination)?,
+    pub fn new() -> Self {
+        Self {
+            transport: None,
             babble: BabbleEmitter::new(),
             etvr: EtvrEmitter::new(),
-        })
+        }
     }
 
     pub fn with_config(config: &Config) -> Result<Self, TransportError> {
-        Self::new(&config.output.osc.destination)
+        let mut output = Self::new();
+        output.set_destination(&config.output.osc.destination)?;
+
+        Ok(output)
     }
 
     pub fn set_destination(
         &mut self,
         destination: impl ToSocketAddrs,
     ) -> Result<(), TransportError> {
-        self.transport = OscTransport::udp(destination)?;
+        self.transport = Some(OscTransport::udp(destination)?);
         Ok(())
     }
 
     pub fn send_face(&mut self, weights: Weights<'_, FaceShape>) {
-        self.babble.process_face(weights, &mut self.transport);
+        let Some(transport) = &mut self.transport else {
+            return;
+        };
+
+        self.babble.process_face(weights, transport);
     }
 
     pub fn send_eyes(&mut self, weights: Weights<'_, EyeShape>) {
-        self.babble.process_eyes(weights, &mut self.transport);
-        self.etvr.process_eyes(weights, &mut self.transport);
+        let Some(transport) = &mut self.transport else {
+            return;
+        };
+
+        self.babble.process_eyes(weights, transport);
+        self.etvr.process_eyes(weights, transport);
     }
 
     pub fn flush(&mut self) -> Result<(), TransportError> {
-        self.transport.flush()
+        let Some(transport) = &mut self.transport else {
+            return Ok(());
+        };
+
+        transport.flush()
     }
 }
