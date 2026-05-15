@@ -114,15 +114,17 @@ Tracking can be disabled for specific points by setting their `camera` value to 
 [eye.right]
 camera = ""
 
-"......"
+# <...>
 
 [eye.left]
 camera = ""
 
-"......"
+# <...>
 
 [face]
 camera = "http://192.168.178.162"
+
+# <...> 
 ``` 
 
 The above example will disable both of the eye cameras, leaving only the face camera active.
@@ -165,7 +167,7 @@ The paths to the face and eye tracking onnx models are relative to your current 
 ```toml
 [face]
 
-"......."
+# <...>
 
 model = "/home/user/libsnout/faceModel.onnx" 
 ``` 
