@@ -131,10 +131,17 @@ pub struct TrainConfig {
 pub struct OutputConfig {
     #[serde(default)]
     pub osc: OscConfig,
+
+    pub native: Option<NativeOscConfig>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct OscConfig {
+    pub destination: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct NativeOscConfig {
     pub destination: String,
 }
 

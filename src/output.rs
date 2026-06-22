@@ -100,11 +100,10 @@ pub struct NativeEmitter {
 
 impl NativeEmitter {
     pub fn new() -> Self {
-        todo!()
+        Self {}
     }
 
     pub fn process_eyes(&mut self, weights: Weights<EyeShape>, transport: &mut OscTransport) {
         let _ = (weights, transport);
-        todo!()
     }
 }
