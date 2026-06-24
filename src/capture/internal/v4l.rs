@@ -1,6 +1,11 @@
 use image::GrayImage;
 use v4l::video::capture::Parameters;
-use v4l::{buffer::Type, io::traits::CaptureStream, prelude::UserptrStream, video::Capture};
+use v4l::{
+    buffer::Type,
+    io::traits::CaptureStream,
+    prelude::{MmapStream, UserptrStream},
+    video::Capture,
+};
 
 use crate::capture::internal::Camera;
 use crate::capture::{CameraError, discovery::V4lSource};
@@ -13,9 +18,23 @@ enum PixelFormat {
     Mjpeg,
 }
 
+enum V4lStream {
+    Userptr(UserptrStream),
+    Mmap(MmapStream<'static>),
+}
+
+impl V4lStream {
+    fn next(&mut self) -> std::io::Result<(&[u8], &v4l::buffer::Metadata)> {
+        match self {
+            V4lStream::Userptr(s) => s.next(),
+            V4lStream::Mmap(s) => s.next(),
+        }
+    }
+}
+
 pub struct V4lCamera {
     _device: v4l::Device,
-    stream: UserptrStream,
+    stream: V4lStream,
     pixel_format: PixelFormat,
     pub width: usize,
     pub height: usize,
@@ -31,6 +50,15 @@ impl Camera for V4lCamera {
 
 impl V4lCamera {
     pub fn open(source: V4lSource) -> Result<Self, CameraError> {
+        tracing::debug!(
+            index = source.index,
+            width = source.format.width,
+            height = source.format.height,
+            fps = source.format.fps,
+            fourcc = %String::from_utf8_lossy(&source.fourcc),
+            "Opening V4L2 device"
+        );
+
         let device = v4l::Device::new(source.index as usize)?;
 
         let format = v4l::Format::new(
@@ -39,6 +67,12 @@ impl V4lCamera {
             v4l::FourCC::new(&source.fourcc),
         );
         let format = device.set_format(&format)?;
+
+        tracing::debug!(
+            width = format.width,
+            height = format.height,
+            "Format negotiated"
+        );
 
         let params = Parameters::with_fps(source.format.fps);
         device.set_params(&params)?;
@@ -59,7 +93,18 @@ impl V4lCamera {
         let width = format.width as usize;
         let height = format.height as usize;
 
-        let stream = UserptrStream::new(&device, Type::VideoCapture)?;
+        let stream = match UserptrStream::new(&device, Type::VideoCapture) {
+            Ok(s) => {
+                tracing::debug!("Using userptr streaming mode");
+                V4lStream::Userptr(s)
+            }
+            Err(e) => {
+                tracing::warn!(error = %e, "Userptr streaming not supported, falling back to mmap");
+                let s = MmapStream::new(&device, Type::VideoCapture)?;
+                tracing::debug!("Using mmap streaming mode");
+                V4lStream::Mmap(s)
+            }
+        };
 
         Ok(Self {
             _device: device,
@@ -71,7 +116,16 @@ impl V4lCamera {
     }
 
     pub fn read_frame(&mut self, destination: &mut GrayImage) -> Result<(), CameraError> {
-        let (buf, _meta) = self.stream.next()?;
+        let (buf, _meta) = self.stream.next().map_err(|e| {
+            tracing::error!(
+                error = %e,
+                pixel_format = ?self.pixel_format,
+                width = self.width,
+                height = self.height,
+                "Failed to read frame from V4L2 stream"
+            );
+            e
+        })?;
         match self.pixel_format {
             PixelFormat::Grey => destination.copy_from_slice(buf),
             PixelFormat::Yuyv => {
