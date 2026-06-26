@@ -29,14 +29,6 @@ impl OverlayConnection {
         })
     }
 
-    pub fn from_stream(stream: TcpStream) -> Self {
-        Self {
-            stream,
-            framer: JsonFramer::new(),
-            read_buf: [0u8; 4096],
-        }
-    }
-
     pub fn send(&mut self, packet: &Packet) -> io::Result<()> {
         let json = serde_json::to_string(packet)
             .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
@@ -66,16 +58,6 @@ impl OverlayConnection {
             Ok(Some(OverlayMessage::from_packet(&packet)))
         } else {
             Ok(None)
-        }
-    }
-
-    pub fn drain(&mut self) -> io::Result<Option<OverlayMessage>> {
-        let mut last = None;
-        loop {
-            match self.try_recv()? {
-                Some(msg) => last = Some(msg),
-                None => return Ok(last),
-            }
         }
     }
 }

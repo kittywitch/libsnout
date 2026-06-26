@@ -1,10 +1,4 @@
-mod connection;
-mod framer;
-mod packet;
+mod internal;
+mod overlay;
 
-pub use connection::OverlayConnection;
-pub use framer::JsonFramer;
-pub use packet::{
-    HmdPositionalDataPacket, InitializePacket, OverlayMessage, Packet, RoutineFinishedPacket,
-    RunFixedLengthRoutinePacket, RunVariableLengthRoutinePacket, TrainerProgressReportPacket,
-};
+pub use overlay::{Event, Mode, Overlay, Position, Routine};

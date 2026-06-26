@@ -1,3 +1,5 @@
+#![allow(dead_code)] // Since we have some unused packets.
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
