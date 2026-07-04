@@ -38,7 +38,7 @@
         postFixup = let
           libs = lib.makeLibraryPath [
             pkgs.llvm
-            pkgs.onnxruntime
+            (pkgs.onnxruntime.override { cudaSupport = true; })
             pkgs.vulkan-loader
           ];
         in
