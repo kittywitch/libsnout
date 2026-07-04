@@ -17,43 +17,12 @@
     );
   in
   {
+    overlays.default = prev: final: {
+      libsnout = prev.callPackage ./package.nix {};
+    };
+
     packages = eachSystem (pkgs: {
-      default = pkgs.rustPlatform.buildRustPackage {
-        pname = "snout-cli";
-        version = "main";
-
-        src = ./.;
-
-        cargoLock = {
-          lockFile = ./Cargo.lock;
-        };
-        cargoBuildFlags = [ "--package" "snout-cli" ];
-
-        nativeBuildInputs = [
-          pkgs.pkg-config
-          pkgs.rustPlatform.bindgenHook
-          pkgs.makeWrapper
-        ];
-
-        postFixup = let
-          libs = lib.makeLibraryPath [
-            pkgs.llvm
-            (pkgs.onnxruntime.override { cudaSupport = true; })
-            pkgs.vulkan-loader
-          ];
-        in
-        ''
-          wrapProgram "$out/bin/snout-cli" \
-            --prefix LD_LIBRARY_PATH : "${libs}"
-        '';
-
-        meta = {
-          description = "A library for snout detection and tracking";
-          homepage = "https://github.com/Darksecond/libsnout";
-          platforms = lib.platforms.linux;
-          mainProgram = "snout-cli";
-        };
-      };
-    });
+      default = pkgs.callPackage ./package.nix {};
+      });
   };
 }
