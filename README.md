@@ -12,6 +12,8 @@ It's designed to be a library; easy to integrate in a variety of frontend projec
     - [Tracking](#tracking)
     - [Training an eye model](#training-an-eye-model)
     - [Troubleshooting](#troubleshooting)
+- Remote Control:
+    - See [REMOTE.MD](docs/remote.md)
 
 ## Required dependencies
 

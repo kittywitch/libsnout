@@ -72,6 +72,11 @@ pub fn load(path: impl AsRef<Path>) -> Result<Config, ConfigError> {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct ControlConfig {
+    pub listen: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct FaceShapeCalibration {
     pub shape: FaceShape,
     pub lower: f32,
@@ -91,6 +96,8 @@ pub struct Config {
 
     #[serde(default)]
     pub output: OutputConfig,
+
+    pub control: Option<ControlConfig>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]

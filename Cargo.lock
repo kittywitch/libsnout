@@ -6440,7 +6440,16 @@ dependencies = [
  "indicatif",
  "snout",
  "snout-train",
+ "tracing",
  "tracing-subscriber",
+]
+
+[[package]]
+name = "snout-remote"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "rosc",
 ]
 
 [[package]]
