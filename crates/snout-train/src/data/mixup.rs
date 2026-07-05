@@ -29,7 +29,13 @@ pub struct MixupDataset<Base, Pool> {
 }
 
 impl<Base, Pool> MixupDataset<Base, Pool> {
-    pub fn new(base: Base, neutral: Pool, active: Pool, neutral_prob: f64, cross_prob: f64) -> Self {
+    pub fn new(
+        base: Base,
+        neutral: Pool,
+        active: Pool,
+        neutral_prob: f64,
+        cross_prob: f64,
+    ) -> Self {
         Self {
             base,
             neutral,
@@ -80,10 +86,16 @@ fn blend(a: SampleItem, b: SampleItem, lam: f32) -> SampleItem {
     let expr = match (a.expr, b.expr) {
         (Some(ea), Some(eb)) => {
             let (ea, eb) = (ea.to_array(), eb.to_array());
-            Some(Expr::from_array(std::array::from_fn(|i| lerp(ea[i], eb[i], lam))))
+            Some(Expr::from_array(std::array::from_fn(|i| {
+                lerp(ea[i], eb[i], lam)
+            })))
         }
         (a, b) => a.or(b),
     };
 
-    SampleItem { image, expr, gaze: None }
+    SampleItem {
+        image,
+        expr,
+        gaze: None,
+    }
 }

@@ -21,9 +21,10 @@ fn loads_pretrained() {
 
     let device = Default::default();
     let mut model = MobileNetV4Config::new().init::<B>(&device);
-    let mut store =
-        SafetensorsStore::from_file("../snout-train/assets/expr_pretrain.safetensors");
-    let result = model.load_from(&mut store).expect("load expr_pretrain.safetensors");
+    let mut store = SafetensorsStore::from_file("../snout-train/assets/expr_pretrain.safetensors");
+    let result = model
+        .load_from(&mut store)
+        .expect("load expr_pretrain.safetensors");
     assert!(result.errors.is_empty(), "errors: {:?}", result.errors);
     assert!(result.missing.is_empty(), "missing: {:?}", result.missing);
     assert!(result.unused.is_empty(), "unused: {:?}", result.unused);

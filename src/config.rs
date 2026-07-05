@@ -3,7 +3,14 @@ use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use crate::{calibration::FaceShape, capture::{processing::{Crop, PreprocessConfig}, sensor::Gc0308Config}, pipeline::FilterParameters};
+use crate::{
+    calibration::FaceShape,
+    capture::{
+        processing::{Crop, PreprocessConfig},
+        sensor::Gc0308Config,
+    },
+    pipeline::FilterParameters,
+};
 
 #[derive(Debug, Error)]
 pub enum ConfigError {

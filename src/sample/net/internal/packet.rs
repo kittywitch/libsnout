@@ -48,7 +48,10 @@ impl RunVariableLengthRoutinePacket {
         let frac = seconds - seconds.floor();
         Self {
             routine_name: name.to_string(),
-            time: format!("{hours:02}:{mins:02}:{secs:02}.{:07}", (frac * 10_000_000.0) as u64),
+            time: format!(
+                "{hours:02}:{mins:02}:{secs:02}.{:07}",
+                (frac * 10_000_000.0) as u64
+            ),
         }
     }
 }
@@ -111,12 +114,10 @@ pub enum OverlayMessage {
 impl OverlayMessage {
     pub fn from_packet(packet: &Packet) -> Self {
         match packet.name.as_str() {
-            "HmdPositionalDataPacket" => {
-                match packet.parse_data::<HmdPositionalDataPacket>() {
-                    Ok(data) => Self::PositionalData(data),
-                    Err(_) => Self::Unknown(packet.name.clone()),
-                }
-            }
+            "HmdPositionalDataPacket" => match packet.parse_data::<HmdPositionalDataPacket>() {
+                Ok(data) => Self::PositionalData(data),
+                Err(_) => Self::Unknown(packet.name.clone()),
+            },
             "RoutineFinishedPacket" => {
                 let name = packet
                     .parse_data::<RoutineFinishedPacket>()

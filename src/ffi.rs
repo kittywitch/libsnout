@@ -3,10 +3,7 @@ use std::path::Path;
 use std::sync::Mutex;
 use std::{cell::RefCell, os::raw::c_char};
 
-use crate::calibration::{
-    Bounds, EyeCalibrator, EyeShape, FaceShape, ManualFaceCalibrator,
-};
-use crate::weights::Weights;
+use crate::calibration::{Bounds, EyeCalibrator, EyeShape, FaceShape, ManualFaceCalibrator};
 use crate::capture::processing::Crop;
 use crate::capture::{
     CameraError, MonoCamera,
@@ -21,6 +18,7 @@ use crate::track::eye::EyeTracker;
 use crate::track::face::FaceTracker;
 use crate::track::output::Output;
 use crate::track::{TrackerError, initialize_runtime};
+use crate::weights::Weights;
 
 // TODO: thread_local!
 static CAMERA_INFO: Mutex<Vec<CameraInfo>> = Mutex::new(Vec::new());

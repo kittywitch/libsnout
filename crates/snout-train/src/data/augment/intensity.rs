@@ -54,7 +54,11 @@ impl IntensityPlan {
             let x = (*v * self.contrast + self.brightness).clamp(0.0, 1.0);
             // Gamma is applied to the clamped [0, 1] value, matching Python's
             // `np.clip(x * contrast + bright, 0, 1) ** gamma`.
-            *v = if self.gamma == 1.0 { x } else { x.powf(self.gamma) };
+            *v = if self.gamma == 1.0 {
+                x
+            } else {
+                x.powf(self.gamma)
+            };
         }
     }
 }

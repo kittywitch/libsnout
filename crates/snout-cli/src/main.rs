@@ -7,7 +7,7 @@ use std::process;
 
 use clap::{Parser, Subcommand, ValueEnum};
 use indicatif::MultiProgress;
-use tracing_subscriber::{EnvFilter};
+use tracing_subscriber::EnvFilter;
 
 use crate::commands::{
     CaptureCommand, ListCamerasCommand, SampleCommand, TrackCommand, TrainCommand,
@@ -32,7 +32,9 @@ fn main() {
         .or_else(snout::config::find_default_config)
         .unwrap_or_else(|| {
             eprintln!("Error: No config file found.");
-            eprintln!("Specify a config file with --config <path>, or place one in a standard location.");
+            eprintln!(
+                "Specify a config file with --config <path>, or place one in a standard location."
+            );
             process::exit(1);
         });
 

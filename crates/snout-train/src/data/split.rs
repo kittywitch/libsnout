@@ -22,7 +22,11 @@ pub struct SplitDataset<D> {
 impl<D> SplitDataset<D> {
     /// `val_frac` is the fraction taken as the (first) validation partition.
     pub fn new(dataset: D, rng: impl Into<RngSource>, val_frac: f64) -> Self {
-        Self { dataset, rng: rng.into(), val_frac }
+        Self {
+            dataset,
+            rng: rng.into(),
+            val_frac,
+        }
     }
 
     /// Builds `(val, train)`: the first `val_frac` of the shuffled items, and the rest.

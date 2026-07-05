@@ -32,7 +32,8 @@ impl<W: Write> CaptureWriter<W> {
     pub fn write_meta(&mut self, meta: &FrameMeta) -> io::Result<()> {
         self.inner.write_f32::<LittleEndian>(meta.routine_pitch)?;
         self.inner.write_f32::<LittleEndian>(meta.routine_yaw)?;
-        self.inner.write_f32::<LittleEndian>(meta.routine_distance)?;
+        self.inner
+            .write_f32::<LittleEndian>(meta.routine_distance)?;
         self.inner
             .write_f32::<LittleEndian>(meta.routine_convergence)?;
         self.inner

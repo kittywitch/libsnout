@@ -145,7 +145,11 @@ impl LongSampler {
 
         let mut overlay = Overlay::start(&self.overlay_path, self.overlay_mode)?;
 
-        let stages = if stages.is_empty() { &Stage::ALL[..] } else { stages };
+        let stages = if stages.is_empty() {
+            &Stage::ALL[..]
+        } else {
+            stages
+        };
         for &stage in stages {
             self.record_stage(&mut overlay, dir, stage)?;
         }
@@ -181,7 +185,12 @@ impl LongSampler {
         Ok(())
     }
 
-    fn routine(&mut self, overlay: &mut Overlay, collector: &mut FrameCollector, routine: Routine) -> Result<(), SamplerError> {
+    fn routine(
+        &mut self,
+        overlay: &mut Overlay,
+        collector: &mut FrameCollector,
+        routine: Routine,
+    ) -> Result<(), SamplerError> {
         overlay.begin(routine)?;
 
         if routine.is_tutorial() {
@@ -313,8 +322,11 @@ mod tests {
 
     #[test]
     fn backup_preserves_previous_passes() {
-        let dir = std::env::temp_dir()
-            .join(format!("snout_backup_{}_{}", std::process::id(), backup_timestamp()));
+        let dir = std::env::temp_dir().join(format!(
+            "snout_backup_{}_{}",
+            std::process::id(),
+            backup_timestamp()
+        ));
         fs::create_dir_all(&dir).unwrap();
         let path = dir.join("squint.bin");
         let backups = dir.join("backups");

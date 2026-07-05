@@ -38,7 +38,11 @@ impl<B: AutodiffBackend> Validator<B> {
             .batch_size(batch_size.max(1))
             .set_device(device.clone())
             .build(dataset);
-        Self { loader, every, empty }
+        Self {
+            loader,
+            every,
+            empty,
+        }
     }
 
     /// Metrics when `step` lands on the cadence (or is the final step) and there is

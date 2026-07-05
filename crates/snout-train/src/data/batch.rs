@@ -5,7 +5,9 @@ use burn::tensor::{Tensor, TensorData, backend::Backend};
 
 use crate::data::dataset::{PairedSampleItem, SampleItem};
 use crate::data::label::{Expr, Gaze};
-use crate::spec::{EXPR_OUTPUTS, GAZE_OUTPUTS, IMAGE_HEIGHT, IMAGE_WIDTH, PIXELS_PER_FRAME, TEMPORAL_DEPTH};
+use crate::spec::{
+    EXPR_OUTPUTS, GAZE_OUTPUTS, IMAGE_HEIGHT, IMAGE_WIDTH, PIXELS_PER_FRAME, TEMPORAL_DEPTH,
+};
 
 /// Gaze fill for samples without a gaze label (center gaze).
 const NO_GAZE: [f32; GAZE_OUTPUTS] = [0.5; GAZE_OUTPUTS];
@@ -19,7 +21,12 @@ fn image_tensor<B: Backend>(pixels: Vec<f32>, batch: usize, device: &B::Device) 
     )
 }
 
-fn label_tensor<B: Backend>(values: Vec<f32>, batch: usize, width: usize, device: &B::Device) -> Tensor<B, 2> {
+fn label_tensor<B: Backend>(
+    values: Vec<f32>,
+    batch: usize,
+    width: usize,
+    device: &B::Device,
+) -> Tensor<B, 2> {
     Tensor::from_data(TensorData::new(values, [batch, width]), device)
 }
 

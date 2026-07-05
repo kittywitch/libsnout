@@ -10,10 +10,10 @@ use crate::data::stream::{EXPR_EVEN_BATCH, ExprData};
 use crate::model::{ExprNet, pretrained_expr};
 use crate::train::config::TrainConfig;
 use crate::train::eval::Validator;
+use crate::train::loss::{self, DeconfuseLoss, EvennessLoss};
 use crate::train::optim::adamw_split;
 use crate::train::progress::Reporter;
 use crate::train::schedule::ExprSchedule;
-use crate::train::loss::{self, DeconfuseLoss, EvennessLoss};
 
 /// Trains the expression net ([`ExprNet`]). A single AdamW optimizer runs the whole
 /// schedule ([`ExprSchedule`]): the head warms up with the backbone frozen, both
@@ -71,16 +71,14 @@ impl<'a, B: AutodiffBackend> ExprTrainer<'a, B> {
 
         // Paired-eye loader for the evenness term (skipped when there are no L/R pairs),
         // likewise pinned to one batch per step so `paired_iter` never runs dry.
-        let paired_loader = data.b
-            .build()
-            .map(|paired| {
-                DataLoaderBuilder::new(PairedSampleBatcher)
-                    .batch_size(EXPR_EVEN_BATCH)
-                    .shuffle(self.config.seed)
-                    .num_workers(self.config.num_workers.min(2))
-                    .set_device(self.device.clone())
-                    .build(paired)
-            });
+        let paired_loader = data.b.build().map(|paired| {
+            DataLoaderBuilder::new(PairedSampleBatcher)
+                .batch_size(EXPR_EVEN_BATCH)
+                .shuffle(self.config.seed)
+                .num_workers(self.config.num_workers.min(2))
+                .set_device(self.device.clone())
+                .build(paired)
+        });
 
         let mut model = pretrained_expr::<B>(self.device);
         let mut optim = adamw_split(&model);
@@ -109,7 +107,9 @@ impl<'a, B: AutodiffBackend> ExprTrainer<'a, B> {
                         let pred_l = outs.clone().narrow(0, main_n, pair_n);
                         let pred_r = outs.narrow(0, main_n + pair_n, pair_n);
 
-                        let even = self.evenness.forward(pred_l, pred_r, pair.left_expr, pair.right_expr);
+                        let even =
+                            self.evenness
+                                .forward(pred_l, pred_r, pair.left_expr, pair.right_expr);
 
                         (pred, Some(even))
                     }

@@ -10,7 +10,7 @@ use std::{
 use indicatif::MultiProgress;
 use snout::{
     calibration::{EyeShape, FaceShape},
-    capture::discovery::{query_cameras, CameraInfo},
+    capture::discovery::{CameraInfo, query_cameras},
     config::Config,
     control::{ControlEvent, OscControl},
     track::{eye::EyeTracker, face::FaceTracker, initialize_runtime, output::Output},
@@ -56,7 +56,12 @@ impl TrackCommand {
     }
 
     /// Face tracking worker: owns its tracker, output, and status line.
-    fn run_face(&self, cameras: &[CameraInfo], multi: &MultiProgress, control: Receiver<FaceEvent>) {
+    fn run_face(
+        &self,
+        cameras: &[CameraInfo],
+        multi: &MultiProgress,
+        control: Receiver<FaceEvent>,
+    ) {
         let mut tracker = FaceTracker::with_config(cameras, &self.config).unwrap();
         let mut output = Output::with_config(&self.config).unwrap();
 
@@ -225,6 +230,12 @@ impl Gaze {
 
 impl StatusBarItem for Gaze {
     fn render(&self) -> Cow<'static, str> {
-        format!("{}({:+.2},{:+.2})", self.side, self.pitch.get(), self.yaw.get()).into()
+        format!(
+            "{}({:+.2},{:+.2})",
+            self.side,
+            self.pitch.get(),
+            self.yaw.get()
+        )
+        .into()
     }
 }

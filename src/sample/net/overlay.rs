@@ -4,18 +4,17 @@ use std::time::Duration;
 
 use super::internal::connection::OverlayConnection;
 use super::internal::packet::{
-    OverlayMessage, Packet,
-    RunFixedLengthRoutinePacket, RunVariableLengthRoutinePacket,
+    OverlayMessage, Packet, RunFixedLengthRoutinePacket, RunVariableLengthRoutinePacket,
 };
 
 #[derive(Copy, Clone)]
 pub enum Routine {
-    GazeTutorial, // 30s
+    GazeTutorial,      // 30s
     ShortGazeTutorial, // 5s
     Gaze(Duration),
     GazeExprTutorial, // 10s
     FreeExpr(Duration),
-    BlinkTutorial, // 10s
+    BlinkTutorial,      // 10s
     ShortBlinkTutorial, // 4s
     Blink(Duration),
     WidenTutorial, // 10s
@@ -117,19 +116,17 @@ impl Overlay {
 
     pub fn try_recv(&mut self) -> io::Result<Option<Event>> {
         match self.conn.try_recv()? {
-            Some(OverlayMessage::PositionalData(data)) => {
-                Ok(Some(Event::Position(Position {
-                    routine_pitch: data.routine_pitch,
-                    routine_yaw: data.routine_yaw,
-                    routine_distance: data.routine_distance,
-                    routine_convergence: data.routine_convergence,
-                    fov_adjust_distance: data.fov_adjust_distance,
-                    left_eye_pitch: data.left_eye_pitch,
-                    left_eye_yaw: data.left_eye_yaw,
-                    right_eye_pitch: data.right_eye_pitch,
-                    right_eye_yaw: data.right_eye_yaw,
-                })))
-            }
+            Some(OverlayMessage::PositionalData(data)) => Ok(Some(Event::Position(Position {
+                routine_pitch: data.routine_pitch,
+                routine_yaw: data.routine_yaw,
+                routine_distance: data.routine_distance,
+                routine_convergence: data.routine_convergence,
+                fov_adjust_distance: data.fov_adjust_distance,
+                left_eye_pitch: data.left_eye_pitch,
+                left_eye_yaw: data.left_eye_yaw,
+                right_eye_pitch: data.right_eye_pitch,
+                right_eye_yaw: data.right_eye_yaw,
+            }))),
             Some(OverlayMessage::RoutineFinished(_)) => Ok(Some(Event::Finished)),
             Some(OverlayMessage::Unknown(_)) => Ok(None),
             None => Ok(None),

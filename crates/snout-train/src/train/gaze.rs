@@ -28,7 +28,12 @@ impl<'a, B: AutodiffBackend> GazeTrainer<'a, B> {
         device: &'a B::Device,
         reporter: Reporter<'a>,
     ) -> Self {
-        Self { frames, config, device, reporter }
+        Self {
+            frames,
+            config,
+            device,
+            reporter,
+        }
     }
 
     pub fn fit(mut self) -> EyeNet<B> {
@@ -58,7 +63,11 @@ impl<'a, B: AutodiffBackend> GazeTrainer<'a, B> {
                 }
 
                 let lr = schedule.lr_at(step);
-                let loss = MseLoss::new().forward(model.forward(batch.inputs), batch.gaze, Reduction::Mean);
+                let loss = MseLoss::new().forward(
+                    model.forward(batch.inputs),
+                    batch.gaze,
+                    Reduction::Mean,
+                );
                 self.reporter.report(&loss, step, total, None);
                 let grads = GradientsParams::from_grads(loss.backward(), &model);
                 model = optim.step(lr, model, grads);

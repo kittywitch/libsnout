@@ -24,9 +24,17 @@ where
     fn get(&self, index: usize) -> Option<SampleItem> {
         let pair = self.inner.get(index / 2)?;
         Some(if index % 2 == 0 {
-            SampleItem { image: pair.left_image, expr: pair.left_expr, gaze: None }
+            SampleItem {
+                image: pair.left_image,
+                expr: pair.left_expr,
+                gaze: None,
+            }
         } else {
-            SampleItem { image: pair.right_image, expr: pair.right_expr, gaze: None }
+            SampleItem {
+                image: pair.right_image,
+                expr: pair.right_expr,
+                gaze: None,
+            }
         })
     }
 

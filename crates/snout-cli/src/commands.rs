@@ -73,8 +73,15 @@ fn print_progress(p: snout_train::train::Progress) {
     if let Some(val) = p.val {
         println!(
             "\r{:<4}  step {:>5}/{:<5}  loss {:.5}   val_mse {:.5}  r[lid={:.2} widen={:.2} squint={:.2} brow={:.2}]",
-            p.phase, p.step, p.total_steps, p.loss,
-            val.mse, val.corr[0], val.corr[1], val.corr[2], val.corr[3],
+            p.phase,
+            p.step,
+            p.total_steps,
+            p.loss,
+            val.mse,
+            val.corr[0],
+            val.corr[1],
+            val.corr[2],
+            val.corr[3],
         );
     } else {
         print!(
@@ -109,14 +116,24 @@ impl CaptureCommand {
             CaptureSource::LeftEye => {
                 let mut tracker = EyeTracker::with_config(&cameras, &self.config).unwrap();
                 capture_frame(
-                    || tracker.track().unwrap().map(|r| r.left_processed_frame.clone()),
+                    || {
+                        tracker
+                            .track()
+                            .unwrap()
+                            .map(|r| r.left_processed_frame.clone())
+                    },
                     &self.destination,
                 );
             }
             CaptureSource::RightEye => {
                 let mut tracker = EyeTracker::with_config(&cameras, &self.config).unwrap();
                 capture_frame(
-                    || tracker.track().unwrap().map(|r| r.right_processed_frame.clone()),
+                    || {
+                        tracker
+                            .track()
+                            .unwrap()
+                            .map(|r| r.right_processed_frame.clone())
+                    },
                     &self.destination,
                 );
             }
@@ -175,8 +192,8 @@ impl SampleCommand {
     pub fn run(&self) {
         let cameras = query_cameras();
 
-        let mut sampler = LongSampler::with_config(&cameras, &self.config)
-            .expect("failed to create sampler");
+        let mut sampler =
+            LongSampler::with_config(&cameras, &self.config).expect("failed to create sampler");
 
         if self.stages.is_empty() {
             println!("Starting full calibration...");
@@ -185,7 +202,9 @@ impl SampleCommand {
             println!("Recording stage(s): {}", names.join(", "));
         }
 
-        sampler.run(&self.output, &self.stages).expect("sampling failed");
+        sampler
+            .run(&self.output, &self.stages)
+            .expect("sampling failed");
         println!("Done. Written to {}", self.output.display());
     }
 }

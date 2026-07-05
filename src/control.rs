@@ -64,8 +64,11 @@ fn decode_packet(packet: &OscPacket) -> Option<ControlEvent> {
 fn decode_message(message: &OscMessage) -> Option<ControlEvent> {
     match message.addr.as_str() {
         "/snout/face/bounds" => {
-            let [OscType::String(shape), OscType::Float(lower), OscType::Float(upper)] =
-                message.args.as_slice()
+            let [
+                OscType::String(shape),
+                OscType::Float(lower),
+                OscType::Float(upper),
+            ] = message.args.as_slice()
             else {
                 return None;
             };

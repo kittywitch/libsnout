@@ -81,7 +81,11 @@ impl EyePipeline {
         self.filter.parameters = parameters;
     }
 
-    pub fn run(&mut self, left: &Frame, right: &Frame) -> Result<Option<&Weights<EyeShape>>, PipelineError> {
+    pub fn run(
+        &mut self,
+        left: &Frame,
+        right: &Frame,
+    ) -> Result<Option<&Weights<EyeShape>>, PipelineError> {
         let Some(inference) = self.inference.as_mut() else {
             return Ok(None);
         };
