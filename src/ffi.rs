@@ -42,6 +42,8 @@ pub enum SnoutError {
     ///
     /// This might mean the camera was disconnected, or could be a transient error.
     CameraInvalidFrame,
+    /// No usable camera sources were configured.
+    CameraInvalidSources,
     /// An internal error occurred during camera operations.
     CameraInternal,
     /// An internal error occurred during preprocessing.
@@ -90,6 +92,7 @@ impl From<CameraError> for SnoutError {
         match error {
             CameraError::InvalidFormat(_) => SnoutError::CameraInvalidFormat,
             CameraError::InvalidFrame(_) => SnoutError::CameraInvalidFrame,
+            CameraError::InvalidSources => SnoutError::CameraInvalidSources,
             CameraError::Internal(_) => SnoutError::CameraInternal,
         }
     }

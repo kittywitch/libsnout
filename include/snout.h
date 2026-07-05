@@ -33,6 +33,10 @@ typedef enum SnoutError {
    */
   SnoutError_CameraInvalidFrame,
   /**
+   * No usable camera sources were configured.
+   */
+  SnoutError_CameraInvalidSources,
+  /**
    * An internal error occurred during camera operations.
    */
   SnoutError_CameraInternal,
@@ -145,9 +149,15 @@ enum EyeShape
   EyeShape_LeftEyePitch,
   EyeShape_LeftEyeYaw,
   EyeShape_LeftEyeLid,
+  EyeShape_LeftEyeWiden,
+  EyeShape_LeftEyeBrow,
+  EyeShape_LeftEyeSquint,
   EyeShape_RightEyePitch,
   EyeShape_RightEyeYaw,
   EyeShape_RightEyeLid,
+  EyeShape_RightEyeWiden,
+  EyeShape_RightEyeBrow,
+  EyeShape_RightEyeSquint,
 };
 #ifndef __cplusplus
 #if __STDC_VERSION__ >= 202311L
@@ -189,6 +199,12 @@ typedef struct MonoCamera MonoCamera;
 typedef struct OscTransport OscTransport;
 
 typedef struct Output Output;
+
+/**
+ * One calibration pass. Each stage is a guided tutorial followed by the recorded
+ * routine, written to its own `<stage>.bin` in the session directory.
+ */
+typedef struct Stage Stage;
 
 typedef struct StereoCamera StereoCamera;
 
@@ -300,6 +316,8 @@ typedef struct SnoutOutputFields {
   struct BabbleEmitter *babble;
   struct EtvrEmitter *etvr;
 } SnoutOutputFields;
+
+
 
 #ifdef __cplusplus
 extern "C" {

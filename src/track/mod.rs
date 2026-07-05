@@ -26,6 +26,9 @@ impl From<CameraError> for TrackerError {
         match error {
             CameraError::InvalidFormat(e) => TrackerError::Internal(e),
             CameraError::InvalidFrame(e) => TrackerError::Internal(e),
+            CameraError::InvalidSources => {
+                TrackerError::Open(CameraError::InvalidSources.to_string())
+            }
             CameraError::Internal(e) => TrackerError::Internal(e),
         }
     }

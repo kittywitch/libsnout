@@ -261,16 +261,9 @@ impl LongSampler {
 
     fn ensure_camera(&mut self) -> Result<(), SamplerError> {
         if self.camera.is_none() {
-            let (Some(left), Some(right)) = (&self.left_source, &self.right_source) else {
-                return Err(SamplerError::Camera("no camera source configured".into()));
-            };
-
-            let camera = if left == right {
-                StereoCamera::open_sbs(left)
-            } else {
-                StereoCamera::open(left, right)
-            }
-            .map_err(|e| SamplerError::Camera(e.to_string()))?;
+            let camera =
+                StereoCamera::from_sources(self.left_source.as_ref(), self.right_source.as_ref())
+                    .map_err(|e| SamplerError::Camera(e.to_string()))?;
 
             self.camera = Some(camera);
         }
