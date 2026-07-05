@@ -1,7 +1,12 @@
-use std::{borrow::Cow, cell::Cell, rc::Rc, time::{Duration, Instant}};
+use std::{
+    borrow::Cow,
+    cell::Cell,
+    rc::Rc,
+    time::{Duration, Instant},
+};
 
-use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use console::style;
+use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 
 pub trait StatusBarItem {
     fn render(&self) -> Cow<'static, str>;
@@ -17,11 +22,13 @@ impl StatusBar {
         let spinner = multi.add(ProgressBar::new_spinner());
 
         spinner.set_style(
-            ProgressStyle::default_spinner()
-                .tick_chars("⠁⠂⠄⡀⡈⡐⡠⣀⣁⣂⣄⣌⣔⣤⣥⣦⣮⣶⣷⣿⡿⠿⢟⠟⡛⠛⠫⢋⠋⠍⡉⠉⠑⠡⢁"),
+            ProgressStyle::default_spinner().tick_chars("⠁⠂⠄⡀⡈⡐⡠⣀⣁⣂⣄⣌⣔⣤⣥⣦⣮⣶⣷⣿⡿⠿⢟⠟⡛⠛⠫⢋⠋⠍⡉⠉⠑⠡⢁"),
         );
 
-        Self { spinner, items: Vec::new() }
+        Self {
+            spinner,
+            items: Vec::new(),
+        }
     }
 
     /// Register an item, rendered in insertion order. The returned handle can
@@ -34,7 +41,9 @@ impl StatusBar {
     }
 
     pub fn display(&mut self) {
-        let items = self.items.iter()
+        let items = self
+            .items
+            .iter()
             .map(|item| item.render())
             .filter(|s| !s.is_empty())
             .collect::<Vec<_>>()

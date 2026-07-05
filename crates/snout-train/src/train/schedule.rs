@@ -18,7 +18,12 @@ pub struct WarmupCosine {
 impl WarmupCosine {
     /// The gaze schedule (Python `train_gaze.py`).
     pub fn gaze(total: usize) -> Self {
-        Self { peak: 1e-3, min: 1e-6, warmup: 500, total }
+        Self {
+            peak: 1e-3,
+            min: 1e-6,
+            warmup: 500,
+            total,
+        }
     }
 
     pub fn lr_at(&self, step: usize) -> f64 {
@@ -48,12 +53,26 @@ pub struct ExprStage {
 impl ExprStage {
     /// Stage A: head-only warmup, then head 5e-4 / backbone 1e-4.
     pub const fn stage_a(total: usize) -> Self {
-        Self { head: 5e-4, backbone: 1e-4, min: 1e-6, total, warmup: 200, warmup_head: 1e-3 }
+        Self {
+            head: 5e-4,
+            backbone: 1e-4,
+            min: 1e-6,
+            total,
+            warmup: 200,
+            warmup_head: 1e-3,
+        }
     }
 
     /// Stage B: head 2e-4 / backbone 5e-5, cosine decay, no warmup.
     pub const fn stage_b(total: usize) -> Self {
-        Self { head: 2e-4, backbone: 5e-5, min: 1e-6, total, warmup: 0, warmup_head: 0.0 }
+        Self {
+            head: 2e-4,
+            backbone: 5e-5,
+            min: 1e-6,
+            total,
+            warmup: 0,
+            warmup_head: 0.0,
+        }
     }
 
     pub fn lrs_at(&self, step: usize) -> (f64, f64) {

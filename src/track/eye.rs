@@ -90,7 +90,8 @@ impl EyeTracker {
     ///
     /// If the source has changed, the camera will be re-opened.
     /// If left equals right, the camera will be opened in side-by-side mode.
-    /// If either source is `None`, the camera will not be opened.
+    /// If one source is `None`, then the source will be duplicated.
+    /// If both sources are `None`, the camera will not be opened.
     pub fn set_source(&mut self, left: Option<CameraSource>, right: Option<CameraSource>) {
         if self.left_source != left || self.right_source != right {
             self.camera = None;
@@ -139,22 +140,23 @@ impl EyeTracker {
 
     fn ensure_camera(&mut self) -> Result<bool, TrackerError> {
         if self.camera.is_none() {
-            let (Some(left), Some(right)) = (&self.left_source, &self.right_source) else {
+            // Nothing configured yet: skip tracking rather than erroring.
+            if self.left_source.is_none() && self.right_source.is_none() {
                 return Ok(false);
-            };
-
-            let sbs = left == right;
-            tracing::debug!(sbs, ?left, ?right, "Opening eye tracker camera");
-
-            let camera = if sbs {
-                StereoCamera::open_sbs(left)
-            } else {
-                StereoCamera::open(left, right)
             }
-            .map_err(|e| {
-                tracing::error!(error = %e, sbs, "Failed to open eye tracker camera");
-                TrackerError::Open(e.to_string())
-            })?;
+
+            tracing::debug!(
+                left = ?self.left_source,
+                right = ?self.right_source,
+                "Opening eye tracker camera"
+            );
+
+            let camera =
+                StereoCamera::from_sources(self.left_source.as_ref(), self.right_source.as_ref())
+                    .map_err(|e| {
+                    tracing::error!(error = %e, "Failed to open eye tracker camera");
+                    TrackerError::Open(e.to_string())
+                })?;
 
             self.camera = Some(camera);
         }

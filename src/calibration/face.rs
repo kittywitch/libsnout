@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use serde::{Deserialize, Serialize};
 
 use crate::calibration::Bounds;
@@ -127,6 +129,73 @@ impl From<usize> for FaceShape {
     }
 }
 
+/// Error returned when a string does not name a [`FaceShape`].
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct ParseFaceShapeError;
+
+impl std::fmt::Display for ParseFaceShapeError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("unknown face shape")
+    }
+}
+
+impl std::error::Error for ParseFaceShapeError {}
+
+impl FromStr for FaceShape {
+    type Err = ParseFaceShapeError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s {
+            "cheekPuffLeft" => Self::CheekPuffLeft,
+            "cheekPuffRight" => Self::CheekPuffRight,
+            "cheekSuckLeft" => Self::CheekSuckLeft,
+            "cheekSuckRight" => Self::CheekSuckRight,
+            "jawOpen" => Self::JawOpen,
+            "jawForward" => Self::JawForward,
+            "jawLeft" => Self::JawLeft,
+            "jawRight" => Self::JawRight,
+            "noseSneerLeft" => Self::NoseSneerLeft,
+            "noseSneerRight" => Self::NoseSneerRight,
+            "mouthFunnel" => Self::MouthFunnel,
+            "mouthPucker" => Self::MouthPucker,
+            "mouthLeft" => Self::MouthLeft,
+            "mouthRight" => Self::MouthRight,
+            "mouthRollUpper" => Self::MouthRollUpper,
+            "mouthRollLower" => Self::MouthRollLower,
+            "mouthShrugUpper" => Self::MouthShrugUpper,
+            "mouthShrugLower" => Self::MouthShrugLower,
+            "mouthClose" => Self::MouthClose,
+            "mouthSmileLeft" => Self::MouthSmileLeft,
+            "mouthSmileRight" => Self::MouthSmileRight,
+            "mouthFrownLeft" => Self::MouthFrownLeft,
+            "mouthFrownRight" => Self::MouthFrownRight,
+            "mouthDimpleLeft" => Self::MouthDimpleLeft,
+            "mouthDimpleRight" => Self::MouthDimpleRight,
+            "mouthUpperUpLeft" => Self::MouthUpperUpLeft,
+            "mouthUpperUpRight" => Self::MouthUpperUpRight,
+            "mouthLowerDownLeft" => Self::MouthLowerDownLeft,
+            "mouthLowerDownRight" => Self::MouthLowerDownRight,
+            "mouthPressLeft" => Self::MouthPressLeft,
+            "mouthPressRight" => Self::MouthPressRight,
+            "mouthStretchLeft" => Self::MouthStretchLeft,
+            "mouthStretchRight" => Self::MouthStretchRight,
+            "tongueOut" => Self::TongueOut,
+            "tongueUp" => Self::TongueUp,
+            "tongueDown" => Self::TongueDown,
+            "tongueLeft" => Self::TongueLeft,
+            "tongueRight" => Self::TongueRight,
+            "tongueRoll" => Self::TongueRoll,
+            "tongueBendDown" => Self::TongueBendDown,
+            "tongueCurlUp" => Self::TongueCurlUp,
+            "tongueSquish" => Self::TongueSquish,
+            "tongueFlat" => Self::TongueFlat,
+            "tongueTwistLeft" => Self::TongueTwistLeft,
+            "tongueTwistRight" => Self::TongueTwistRight,
+            _ => return Err(ParseFaceShapeError),
+        })
+    }
+}
+
 impl Shape for FaceShape {
     fn count() -> usize {
         const {
@@ -138,41 +207,183 @@ impl Shape for FaceShape {
 }
 
 pub struct ManualFaceCalibrator {
-    bounds: Vec<Bounds>,
+    bounds: FaceBounds,
     weights: Weights<FaceShape>,
+    neutral_hold: NeutralHold,
+    peak_capture: PeakCapture,
+}
+
+struct FaceBounds {
+    bounds: Vec<Bounds>,
+}
+
+impl FaceBounds {
+    fn new() -> Self {
+        Self {
+            bounds: vec![Bounds::new_01(); FaceShape::count()],
+        }
+    }
+
+    fn get(&self, shape: FaceShape) -> Bounds {
+        self.bounds[shape as usize]
+    }
+
+    fn set(&mut self, shape: FaceShape, bounds: Bounds) {
+        tracing::debug!(shape = ?shape, ?bounds, "set_bounds");
+        self.bounds[shape as usize] = bounds;
+    }
+
+    fn set_lower(&mut self, shape: FaceShape, lower: f32) {
+        tracing::debug!(shape = ?shape, lower, "set_lower");
+        self.bounds[shape as usize].lower = lower;
+    }
+
+    fn set_upper(&mut self, shape: FaceShape, upper: f32) {
+        tracing::debug!(shape = ?shape, upper, "set_upper");
+        self.bounds[shape as usize].upper = upper;
+    }
+
+    fn remap_into(&self, raw: &Weights<FaceShape>, out: &mut Weights<FaceShape>) {
+        out.clear();
+
+        for (shape, value) in raw.iter() {
+            out.set(shape, self.bounds[shape as usize].remap(value));
+        }
+    }
+}
+
+/// At ~30 fps this is roughly three seconds of neutral hold.
+const CALIBRATION_SAMPLES: usize = 100;
+
+struct NeutralHold {
+    remaining: usize,
+    sums: Vec<f32>,
+    counts: Vec<u32>,
+}
+
+impl NeutralHold {
+    fn new() -> Self {
+        Self {
+            remaining: 0,
+            sums: vec![0.0; FaceShape::count()],
+            counts: vec![0; FaceShape::count()],
+        }
+    }
+
+    fn start(&mut self, frames: usize) {
+        tracing::debug!(frames, "start_calibration");
+
+        self.remaining = frames;
+        self.sums.fill(0.0);
+        self.counts.fill(0);
+    }
+
+    fn feed(&mut self, raw: &Weights<FaceShape>, bounds: &mut FaceBounds) {
+        if self.remaining == 0 {
+            return;
+        }
+
+        for (shape, value) in raw.iter() {
+            let index = shape as usize;
+            self.sums[index] += value;
+            self.counts[index] += 1;
+        }
+
+        self.remaining -= 1;
+        if self.remaining != 0 {
+            return;
+        }
+
+        for shape in FaceShape::iter() {
+            let index = shape as usize;
+            if self.counts[index] > 0 {
+                let mean = self.sums[index] / self.counts[index] as f32;
+                bounds.set_lower(shape, mean);
+            }
+        }
+    }
+}
+
+struct PeakCapture {
+    shape: FaceShape,
+    remaining: usize,
+    max: f32,
+}
+
+impl PeakCapture {
+    fn new() -> Self {
+        Self {
+            shape: FaceShape::CheekPuffLeft,
+            remaining: 0,
+            max: f32::NEG_INFINITY,
+        }
+    }
+
+    fn start(&mut self, shape: FaceShape, frames: usize) {
+        tracing::debug!(?shape, frames, "start_upper_calibration");
+
+        self.shape = shape;
+        self.remaining = frames;
+        self.max = f32::NEG_INFINITY;
+    }
+
+    fn feed(&mut self, raw: &Weights<FaceShape>, bounds: &mut FaceBounds) {
+        if self.remaining == 0 {
+            return;
+        }
+
+        if let Some(value) = raw.get(self.shape) {
+            self.max = self.max.max(value);
+        }
+
+        self.remaining -= 1;
+        if self.remaining != 0 {
+            return;
+        }
+
+        bounds.set_upper(self.shape, self.max);
+    }
 }
 
 impl ManualFaceCalibrator {
     pub fn new() -> Self {
         Self {
-            bounds: vec![Bounds::new_01(); FaceShape::count()],
+            bounds: FaceBounds::new(),
             weights: Weights::new(),
+            neutral_hold: NeutralHold::new(),
+            peak_capture: PeakCapture::new(),
         }
     }
 
     pub fn bounds(&self, shape: FaceShape) -> Bounds {
-        self.bounds[shape as usize]
+        self.bounds.get(shape)
     }
 
     pub fn set_bounds(&mut self, shape: FaceShape, bounds: Bounds) {
-        self.bounds[shape as usize] = bounds;
+        self.bounds.set(shape, bounds);
     }
 
     pub fn set_upper(&mut self, shape: FaceShape, upper: f32) {
-        self.bounds[shape as usize].upper = upper;
+        self.bounds.set_upper(shape, upper);
     }
 
     pub fn set_lower(&mut self, shape: FaceShape, lower: f32) {
-        self.bounds[shape as usize].lower = lower;
+        self.bounds.set_lower(shape, lower);
+    }
+
+    pub fn start_calibration(&mut self) {
+        self.neutral_hold.start(CALIBRATION_SAMPLES);
+    }
+
+    pub fn start_upper_calibration(&mut self, shape: FaceShape, frames: usize) {
+        self.peak_capture.start(shape, frames);
     }
 
     pub fn calibrate(&mut self, raw: &Weights<FaceShape>) -> &Weights<FaceShape> {
-        self.weights.clear();
+        self.bounds.remap_into(raw, &mut self.weights);
 
-        for (shape, value) in raw.iter() {
-            let bounds = &self.bounds[<FaceShape as Into<usize>>::into(shape)];
-            self.weights.set(shape, bounds.remap(value));
-        }
+        self.neutral_hold.feed(raw, &mut self.bounds);
+        self.peak_capture.feed(raw, &mut self.bounds);
 
         &self.weights
     }

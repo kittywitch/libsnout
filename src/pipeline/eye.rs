@@ -81,7 +81,11 @@ impl EyePipeline {
         self.filter.parameters = parameters;
     }
 
-    pub fn run(&mut self, left: &Frame, right: &Frame) -> Result<Option<&Weights<EyeShape>>, PipelineError> {
+    pub fn run(
+        &mut self,
+        left: &Frame,
+        right: &Frame,
+    ) -> Result<Option<&Weights<EyeShape>>, PipelineError> {
         let Some(inference) = self.inference.as_mut() else {
             return Ok(None);
         };
@@ -94,7 +98,7 @@ impl EyePipeline {
             .transfer_composite(mat, &mut inference.input_tensor);
 
         let weights = inference.run()?;
-        let filtered_weights = self.filter.filter(&weights);
+        let filtered_weights = self.filter.filter(weights);
 
         self.weights.fill_with(filtered_weights, &self.output_map);
 

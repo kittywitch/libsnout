@@ -186,13 +186,21 @@ impl EyeCalibrator {
             right_eye_yaw_corrected = average_yaw + convergence;
         }
 
-        self.weights.set(EyeShape::LeftEyeYaw, left_eye_yaw_corrected);
+        self.weights
+            .set(EyeShape::LeftEyeYaw, left_eye_yaw_corrected);
         self.weights.set(EyeShape::LeftEyePitch, eye_y);
-        self.weights.set(EyeShape::LeftEyeLid, self.bounds[EyeShape::LeftEyeLid as usize].remap(left_lid));
+        self.weights.set(
+            EyeShape::LeftEyeLid,
+            self.bounds[EyeShape::LeftEyeLid as usize].remap(left_lid),
+        );
 
-        self.weights.set(EyeShape::RightEyeYaw, right_eye_yaw_corrected);
+        self.weights
+            .set(EyeShape::RightEyeYaw, right_eye_yaw_corrected);
         self.weights.set(EyeShape::RightEyePitch, eye_y);
-        self.weights.set(EyeShape::RightEyeLid, self.bounds[EyeShape::RightEyeLid as usize].remap(right_lid));
+        self.weights.set(
+            EyeShape::RightEyeLid,
+            self.bounds[EyeShape::RightEyeLid as usize].remap(right_lid),
+        );
 
         if let Some(left_eye_widen) = raw.get(EyeShape::LeftEyeWiden) {
             self.weights.set(EyeShape::LeftEyeWiden, left_eye_widen);

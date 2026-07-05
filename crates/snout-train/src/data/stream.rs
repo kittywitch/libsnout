@@ -4,7 +4,9 @@
 use std::sync::Arc;
 
 use burn::data::dataset::Dataset;
-use burn::data::dataset::transform::{ComposedDataset, MapperDataset, PartialDataset, RngSource, SamplerDataset, ShuffledDataset};
+use burn::data::dataset::transform::{
+    ComposedDataset, MapperDataset, PartialDataset, RngSource, SamplerDataset, ShuffledDataset,
+};
 
 use crate::data::augment::{AugmentConfig, Augmenter, PairedAugmenter};
 use crate::data::capture::Frame;
@@ -43,17 +45,22 @@ pub struct ExprData {
 }
 
 type S = Arc<FlattenDataset<T>>;
-type T = PartialDataset<Arc<ShuffledDataset<PairedSampleDataset, PairedSampleItem>>, PairedSampleItem>;
+type T =
+    PartialDataset<Arc<ShuffledDataset<PairedSampleDataset, PairedSampleItem>>, PairedSampleItem>;
 
 impl ExprData {
     pub fn new(frames: &Arc<Vec<Frame>>, config: &TrainConfig) -> Self {
         let total = config.expr_steps;
 
-        let pair_active = PairedSampleDataset::new(frames.clone(), Arc::new(samples::paired_active(frames)));
-        let pair_neutral = PairedSampleDataset::new(frames.clone(), Arc::new(samples::paired_neutral(frames)));
+        let pair_active =
+            PairedSampleDataset::new(frames.clone(), Arc::new(samples::paired_active(frames)));
+        let pair_neutral =
+            PairedSampleDataset::new(frames.clone(), Arc::new(samples::paired_neutral(frames)));
 
-        let (eval_active_pair, train_active_pair) = SplitDataset::new(pair_active, RngSource::Seed(config.seed), config.val_frac).build();
-        let (eval_neutral_pair, train_neutral_pair) = SplitDataset::new(pair_neutral, RngSource::Seed(config.seed), config.val_frac).build();
+        let (eval_active_pair, train_active_pair) =
+            SplitDataset::new(pair_active, RngSource::Seed(config.seed), config.val_frac).build();
+        let (eval_neutral_pair, train_neutral_pair) =
+            SplitDataset::new(pair_neutral, RngSource::Seed(config.seed), config.val_frac).build();
 
         let train_active = Arc::new(FlattenDataset::new(train_active_pair.clone()));
         let train_neutral = Arc::new(FlattenDataset::new(train_neutral_pair.clone()));
@@ -63,7 +70,11 @@ impl ExprData {
 
         Self {
             a: ExprStream::new(train_active, train_neutral, total * config.batch_size),
-            b: PairedExprStream::new(total * EXPR_EVEN_BATCH, train_active_pair, train_neutral_pair),
+            b: PairedExprStream::new(
+                total * EXPR_EVEN_BATCH,
+                train_active_pair,
+                train_neutral_pair,
+            ),
             c: EvalExprStream::new(eval_active, eval_neutral),
         }
     }
@@ -77,15 +88,34 @@ pub struct GazeStream<'a> {
 
 impl<'a> GazeStream<'a> {
     pub fn new(frames: &'a Arc<Vec<Frame>>, total_items: usize) -> Self {
-        Self { frames, total_items }
+        Self {
+            frames,
+            total_items,
+        }
     }
 
     pub fn build(self) -> impl Dataset<SampleItem> + use<> {
         let base = WeightedSampledDataset::new(vec![
-            (SampleDataset::new(self.frames.clone(), Arc::new(samples::neutral_gaze(self.frames))), GAZE_NEUTRAL_WEIGHT),
-            (SampleDataset::new(self.frames.clone(), Arc::new(samples::expr_gaze(self.frames))), GAZE_EXPR_WEIGHT),
-            (SampleDataset::new(self.frames.clone(), Arc::new(samples::closed(self.frames))), GAZE_CLOSED_WEIGHT),
-        ]).build();
+            (
+                SampleDataset::new(
+                    self.frames.clone(),
+                    Arc::new(samples::neutral_gaze(self.frames)),
+                ),
+                GAZE_NEUTRAL_WEIGHT,
+            ),
+            (
+                SampleDataset::new(
+                    self.frames.clone(),
+                    Arc::new(samples::expr_gaze(self.frames)),
+                ),
+                GAZE_EXPR_WEIGHT,
+            ),
+            (
+                SampleDataset::new(self.frames.clone(), Arc::new(samples::closed(self.frames))),
+                GAZE_CLOSED_WEIGHT,
+            ),
+        ])
+        .build();
 
         let base = SamplerDataset::new(base, self.total_items);
         let base = MapperDataset::new(base, Augmenter::new(AugmentConfig::gaze()));
@@ -104,7 +134,11 @@ pub struct ExprStream {
 
 impl ExprStream {
     pub fn new(active: S, neutral: S, total_items: usize) -> Self {
-        Self { total_items, active, neutral }
+        Self {
+            total_items,
+            active,
+            neutral,
+        }
     }
 
     pub fn build(self) -> impl Dataset<SampleItem> + use<> {
@@ -115,7 +149,8 @@ impl ExprStream {
         let base = WeightedSampledDataset::new(vec![
             (self.active.clone(), 100 * active_mass / mass),
             (self.neutral.clone(), 100 * neutral_mass / mass),
-        ]).build();
+        ])
+        .build();
 
         let base = SamplerDataset::new(base, self.total_items);
         let base = MapperDataset::new(base, Augmenter::new(AugmentConfig::default()));
@@ -141,7 +176,11 @@ pub struct PairedExprStream {
 
 impl PairedExprStream {
     pub fn new(total_items: usize, active: T, neutral: T) -> Self {
-        Self { total_items, active, neutral }
+        Self {
+            total_items,
+            active,
+            neutral,
+        }
     }
 
     /// `None` when the capture has no valid L/R pairs (single-eye data) — the caller
@@ -160,7 +199,8 @@ impl PairedExprStream {
         let base = WeightedSampledDataset::new(vec![
             (self.active.clone(), 100 * active_mass / mass),
             (self.neutral.clone(), 100 * neutral_mass / mass),
-        ]).build();
+        ])
+        .build();
 
         let base = SamplerDataset::new(base, self.total_items);
         let base = MapperDataset::new(base, PairedAugmenter::new(AugmentConfig::default()));

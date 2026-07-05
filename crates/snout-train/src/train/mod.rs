@@ -62,8 +62,15 @@ impl<B: AutodiffBackend> Trainer<B> {
     }
 
     /// Trains both nets and returns the assembled deployment model.
-    pub fn train(self, bin_path: impl AsRef<Path>) -> Result<MergedDualEye<B::InnerBackend>, TrainError> {
-        let Self { config, device, mut on_progress } = self;
+    pub fn train(
+        self,
+        bin_path: impl AsRef<Path>,
+    ) -> Result<MergedDualEye<B::InnerBackend>, TrainError> {
+        let Self {
+            config,
+            device,
+            mut on_progress,
+        } = self;
 
         let frames = Arc::new(data::read_capture(bin_path).map_err(TrainError::Read)?);
 
@@ -77,7 +84,12 @@ impl<B: AutodiffBackend> Trainer<B> {
             frames.clone(),
             &config,
             &device,
-            Reporter::new(&mut report, Phase::Gaze, config.report_every, config.gaze_steps),
+            Reporter::new(
+                &mut report,
+                Phase::Gaze,
+                config.report_every,
+                config.gaze_steps,
+            ),
         )
         .fit()
         .valid();
@@ -88,7 +100,12 @@ impl<B: AutodiffBackend> Trainer<B> {
             frames,
             &config,
             &device,
-            Reporter::new(&mut report, Phase::Expr, config.report_every, config.expr_steps),
+            Reporter::new(
+                &mut report,
+                Phase::Expr,
+                config.report_every,
+                config.expr_steps,
+            ),
         )
         .fit()
         .valid();

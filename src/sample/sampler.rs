@@ -145,7 +145,11 @@ impl LongSampler {
 
         let mut overlay = Overlay::start(&self.overlay_path, self.overlay_mode)?;
 
-        let stages = if stages.is_empty() { &Stage::ALL[..] } else { stages };
+        let stages = if stages.is_empty() {
+            &Stage::ALL[..]
+        } else {
+            stages
+        };
         for &stage in stages {
             self.record_stage(&mut overlay, dir, stage)?;
         }
@@ -181,7 +185,12 @@ impl LongSampler {
         Ok(())
     }
 
-    fn routine(&mut self, overlay: &mut Overlay, collector: &mut FrameCollector, routine: Routine) -> Result<(), SamplerError> {
+    fn routine(
+        &mut self,
+        overlay: &mut Overlay,
+        collector: &mut FrameCollector,
+        routine: Routine,
+    ) -> Result<(), SamplerError> {
         overlay.begin(routine)?;
 
         if routine.is_tutorial() {
@@ -252,16 +261,9 @@ impl LongSampler {
 
     fn ensure_camera(&mut self) -> Result<(), SamplerError> {
         if self.camera.is_none() {
-            let (Some(left), Some(right)) = (&self.left_source, &self.right_source) else {
-                return Err(SamplerError::Camera("no camera source configured".into()));
-            };
-
-            let camera = if left == right {
-                StereoCamera::open_sbs(left)
-            } else {
-                StereoCamera::open(left, right)
-            }
-            .map_err(|e| SamplerError::Camera(e.to_string()))?;
+            let camera =
+                StereoCamera::from_sources(self.left_source.as_ref(), self.right_source.as_ref())
+                    .map_err(|e| SamplerError::Camera(e.to_string()))?;
 
             self.camera = Some(camera);
         }
@@ -313,8 +315,11 @@ mod tests {
 
     #[test]
     fn backup_preserves_previous_passes() {
-        let dir = std::env::temp_dir()
-            .join(format!("snout_backup_{}_{}", std::process::id(), backup_timestamp()));
+        let dir = std::env::temp_dir().join(format!(
+            "snout_backup_{}_{}",
+            std::process::id(),
+            backup_timestamp()
+        ));
         fs::create_dir_all(&dir).unwrap();
         let path = dir.join("squint.bin");
         let backups = dir.join("backups");

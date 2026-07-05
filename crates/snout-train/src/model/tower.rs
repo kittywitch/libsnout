@@ -1,7 +1,7 @@
 use burn::prelude::*;
 
-use crate::model::eye_net::EyeNet;
 use crate::model::expr_net::{ExprNet, expr_net};
+use crate::model::eye_net::EyeNet;
 
 /// Dual-task tower that processes a single eye's temporal stack through two heads:
 /// - **Gaze**: [`EyeNet`] (MicroChad) -> 2 outputs with sigmoid,

@@ -26,6 +26,9 @@ impl From<CameraError> for TrackerError {
         match error {
             CameraError::InvalidFormat(e) => TrackerError::Internal(e),
             CameraError::InvalidFrame(e) => TrackerError::Internal(e),
+            CameraError::InvalidSources => {
+                TrackerError::Open(CameraError::InvalidSources.to_string())
+            }
             CameraError::Internal(e) => TrackerError::Internal(e),
         }
     }
@@ -66,7 +69,7 @@ pub fn initialize_runtime(path: Option<impl AsRef<Path>>) {
         }
     }
 
-    if let Some(search_path) = std::env::var("LD_LIBRARY_PATH").ok() {
+    if let Ok(search_path) = std::env::var("LD_LIBRARY_PATH") {
         for dir in search_path.split(':') {
             let path = Path::new(dir).join("libonnxruntime.so");
             if path.exists() {

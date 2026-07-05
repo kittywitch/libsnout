@@ -3,7 +3,7 @@ use std::net::ToSocketAddrs;
 use crate::{
     calibration::{EyeShape, FaceShape},
     config::Config,
-    output::{BabbleEmitter, EtvrEmitter, VrchatEmitter, OscTransport, TransportError},
+    output::{BabbleEmitter, EtvrEmitter, OscTransport, TransportError, VrchatEmitter},
     weights::Weights,
 };
 

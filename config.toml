@@ -1,3 +1,7 @@
+#
+# Documentation on how to configure libsnout can be found under CONFIGURING.md
+#
+
 #libonnxruntime = "/usr/lib64/libonnxruntime.so"
 #interval = 10 # In milliseconds
 
@@ -302,3 +306,7 @@ mode = "Debug" # Can be: Debug, OpenVr, OpenXr
 destination = "127.0.0.1:9000"
 #max_pitch = 20.0 # Optional
 #max_yaw = 30.0 # Optional
+
+# Enable OSC remote control
+[control]
+listen = "127.0.0.1:9500"

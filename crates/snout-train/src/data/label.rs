@@ -15,7 +15,12 @@ impl Expr {
     }
 
     pub fn from_array([lid, widen, squint, brow]: [f32; 4]) -> Self {
-        Self { lid, widen, squint, brow }
+        Self {
+            lid,
+            widen,
+            squint,
+            brow,
+        }
     }
 }
 

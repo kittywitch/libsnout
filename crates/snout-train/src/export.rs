@@ -97,7 +97,13 @@ fn onnx_initializers<B: Backend>(model: &MergedDualEye<B>) -> HashMap<String, Ve
         out.insert(format!("{prefix}.conv.weight"), to_le_bytes(&folded_w));
         out.insert(format!("{prefix}.conv.bias"), to_le_bytes(&folded_b));
 
-        for suffix in ["conv.weight", "bn.gamma", "bn.beta", "bn.running_mean", "bn.running_var"] {
+        for suffix in [
+            "conv.weight",
+            "bn.gamma",
+            "bn.beta",
+            "bn.running_mean",
+            "bn.running_var",
+        ] {
             consumed.insert(format!("{prefix}.{suffix}"));
         }
     }
@@ -109,7 +115,10 @@ fn onnx_initializers<B: Backend>(model: &MergedDualEye<B>) -> HashMap<String, Ve
         }
         if shape.len() == 2 {
             // Linear weight: burn [in, out] -> ONNX/PyTorch [out, in].
-            out.insert(name.clone(), to_le_bytes(&transpose(values, shape[0], shape[1])));
+            out.insert(
+                name.clone(),
+                to_le_bytes(&transpose(values, shape[0], shape[1])),
+            );
         } else {
             out.insert(name.clone(), to_le_bytes(values));
         }
@@ -180,10 +189,8 @@ mod tests {
         // Deterministic input both Rust and onnxruntime can reproduce exactly.
         let n = 8 * 128 * 128;
         let input: Vec<f32> = (0..n).map(|i| (i % 256) as f32 / 255.0).collect();
-        let x = Tensor::<B, 4>::from_data(
-            TensorData::new(input.clone(), [1, 8, 128, 128]),
-            &device,
-        );
+        let x =
+            Tensor::<B, 4>::from_data(TensorData::new(input.clone(), [1, 8, 128, 128]), &device);
         let out = merged.forward(x).to_data().to_vec::<f32>().unwrap();
 
         export_onnx(&merged, "/tmp/test_merged.onnx").expect("export");

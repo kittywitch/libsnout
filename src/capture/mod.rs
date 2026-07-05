@@ -29,10 +29,6 @@ impl Frame {
         }
     }
 
-    pub unsafe fn new_unchecked(image: GrayImage) -> Self {
-        Self { image }
-    }
-
     pub fn width(&self) -> usize {
         self.image.width() as _
     }
@@ -54,6 +50,9 @@ impl Frame {
 pub enum CameraError {
     #[error("Invalid format: {0}")]
     InvalidFormat(String),
+    /// No usable camera sources were configured for the requested mode.
+    #[error("Invalid camera sources")]
+    InvalidSources,
     /// Received an empty or invalid frame from hardware.
     /// This can mean that the camera is disconnected or the frame data is corrupted.
     #[error("Invalid frame: {0}")]

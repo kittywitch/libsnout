@@ -74,7 +74,10 @@ impl Camera for V4lCamera {
                 warmup: 5,
             });
         } else {
-            tracing::debug!(index = self.index, "sensor config ignored: not a compatible target");
+            tracing::debug!(
+                index = self.index,
+                "sensor config ignored: not a compatible target"
+            );
         }
     }
 }
@@ -173,7 +176,7 @@ impl V4lCamera {
                 }
             }
             PixelFormat::Mjpeg => {
-                let img = image::load_from_memory(&buf[..])
+                let img = image::load_from_memory(buf)
                     .map_err(|e| CameraError::InvalidFrame(e.to_string()))?
                     .into_luma8();
                 destination.copy_from_slice(img.as_raw());
@@ -189,7 +192,9 @@ impl V4lCamera {
     /// on failure (the sensor NAKs I2C until it is powered). A single blocking
     /// I2C burst on the frame it succeeds, then nothing.
     fn flush_sensor_config(&mut self) {
-        let Some(pending_sensor) = self.pending_sensor.as_mut() else { return; };
+        let Some(pending_sensor) = self.pending_sensor.as_mut() else {
+            return;
+        };
 
         if pending_sensor.warmup > 0 {
             pending_sensor.warmup -= 1;
@@ -207,7 +212,7 @@ impl V4lCamera {
                     config = ?pending_sensor.config,
                     "applied sensor config"
                 );
-            },
+            }
             // The USB id only identifies the Sonix bridge, so a matching board
             // may carry a different sensor. A chip-id mismatch is definitive:
             // don't retry.

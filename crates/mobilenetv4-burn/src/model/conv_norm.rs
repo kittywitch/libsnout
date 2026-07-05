@@ -38,7 +38,9 @@ impl ConvNormConfig {
                 [self.kernel_size, self.kernel_size],
             )
             .with_stride([self.stride, self.stride])
-            .with_padding(PaddingConfig2d::Explicit(padding, padding, padding, padding))
+            .with_padding(PaddingConfig2d::Explicit(
+                padding, padding, padding, padding,
+            ))
             .with_groups(self.groups)
             .with_bias(false)
             .init(device),

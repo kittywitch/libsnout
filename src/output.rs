@@ -36,7 +36,7 @@ impl OscTransport {
         let msg = OscPacket::Message(msg);
 
         if let Ok(buf) = encoder::encode(&msg) {
-            let _ = self.socket.send_to(&buf, &self.destination);
+            let _ = self.socket.send_to(&buf, self.destination);
         }
     }
 
@@ -79,8 +79,7 @@ impl BabbleEmitter {
     }
 }
 
-pub struct EtvrEmitter {
-}
+pub struct EtvrEmitter {}
 
 impl EtvrEmitter {
     pub fn new() -> Self {
@@ -90,7 +89,9 @@ impl EtvrEmitter {
     pub fn process_eyes(&mut self, weights: &Weights<EyeShape>, transport: &mut OscTransport) {
         for (shape, value) in weights.iter() {
             let value = shape.to_etvr_value(value);
-            let Some(addr) = shape.to_etvr() else { continue };
+            let Some(addr) = shape.to_etvr() else {
+                continue;
+            };
 
             let msg = OscMessage {
                 addr: addr.to_string(),
@@ -116,10 +117,26 @@ impl VrchatEmitter {
     }
 
     pub fn process_eyes(&mut self, weights: &Weights<EyeShape>, transport: &mut OscTransport) {
-        let left_yaw = weights.get(EyeShape::LeftEyeYaw).unwrap_or(0.).clamp(-1., 1.) * self.max_yaw_deg;
-        let right_yaw = weights.get(EyeShape::RightEyeYaw).unwrap_or(0.).clamp(-1., 1.) * self.max_yaw_deg;
-        let left_pitch = weights.get(EyeShape::LeftEyePitch).unwrap_or(0.).clamp(-1., 1.) * self.max_pitch_deg;
-        let right_pitch = weights.get(EyeShape::RightEyePitch).unwrap_or(0.).clamp(-1., 1.) * self.max_pitch_deg;
+        let left_yaw = weights
+            .get(EyeShape::LeftEyeYaw)
+            .unwrap_or(0.)
+            .clamp(-1., 1.)
+            * self.max_yaw_deg;
+        let right_yaw = weights
+            .get(EyeShape::RightEyeYaw)
+            .unwrap_or(0.)
+            .clamp(-1., 1.)
+            * self.max_yaw_deg;
+        let left_pitch = weights
+            .get(EyeShape::LeftEyePitch)
+            .unwrap_or(0.)
+            .clamp(-1., 1.)
+            * self.max_pitch_deg;
+        let right_pitch = weights
+            .get(EyeShape::RightEyePitch)
+            .unwrap_or(0.)
+            .clamp(-1., 1.)
+            * self.max_pitch_deg;
 
         let left_lid = weights.get(EyeShape::LeftEyeLid).unwrap_or(0.);
         let right_lid = weights.get(EyeShape::RightEyeLid).unwrap_or(0.);
@@ -132,7 +149,12 @@ impl VrchatEmitter {
 
         let eye_tracking_msg = OscMessage {
             addr: "/tracking/eye/LeftRightPitchYaw".to_string(),
-            args: vec![OscType::Float(-left_pitch),OscType::Float(left_yaw),OscType::Float(-right_pitch),OscType::Float(right_yaw)],
+            args: vec![
+                OscType::Float(-left_pitch),
+                OscType::Float(left_yaw),
+                OscType::Float(-right_pitch),
+                OscType::Float(right_yaw),
+            ],
         };
 
         transport.send(eyes_closed_msg);

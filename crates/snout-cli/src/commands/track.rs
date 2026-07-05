@@ -1,13 +1,31 @@
-use std::{borrow::Cow, cell::Cell, thread, thread::sleep, time::Duration};
+use std::{
+    borrow::Cow,
+    cell::Cell,
+    sync::mpsc::{self, Receiver, Sender},
+    thread,
+    thread::sleep,
+    time::Duration,
+};
 
 use indicatif::MultiProgress;
 use snout::{
-    calibration::EyeShape, capture::discovery::{query_cameras, CameraInfo}, config::Config, track::{eye::EyeTracker, face::FaceTracker, initialize_runtime, output::Output},
+    calibration::{EyeShape, FaceShape},
+    capture::discovery::{CameraInfo, query_cameras},
+    config::Config,
+    control::{ControlEvent, OscControl},
+    track::{eye::EyeTracker, face::FaceTracker, initialize_runtime, output::Output},
 };
 
 use crate::status::{Heartbeat, Pair, Rate, StatusBar, StatusBarItem};
 
 const IDLE_RETRY: Duration = Duration::from_millis(10);
+
+/// A control command routed to the face worker.
+enum FaceEvent {
+    Bounds(FaceShape, f32, f32),
+    Calibrate,
+    CalibrateUpper(FaceShape, u32),
+}
 
 pub struct TrackCommand {
     config: Config,
@@ -25,14 +43,26 @@ impl TrackCommand {
         let cameras = query_cameras();
         let cameras = &cameras;
 
+        let (face_tx, face_rx) = mpsc::channel::<FaceEvent>();
+
         thread::scope(|scope| {
-            scope.spawn(move || self.run_face(cameras, multi));
+            if let Some(control) = &self.config.control {
+                let listen = control.listen.clone();
+                scope.spawn(move || run_control(listen, face_tx));
+            }
+
+            scope.spawn(move || self.run_face(cameras, multi, face_rx));
             scope.spawn(move || self.run_eye(cameras, multi));
         });
     }
 
     /// Face tracking worker: owns its tracker, output, and status line.
-    fn run_face(&self, cameras: &[CameraInfo], multi: &MultiProgress) {
+    fn run_face(
+        &self,
+        cameras: &[CameraInfo],
+        multi: &MultiProgress,
+        control: Receiver<FaceEvent>,
+    ) {
         let mut tracker = FaceTracker::with_config(cameras, &self.config).unwrap();
         let mut output = Output::with_config(&self.config).unwrap();
 
@@ -41,6 +71,23 @@ impl TrackCommand {
         let tick_rate = status.add(Rate::new("TICK", 0));
 
         loop {
+            while let Ok(event) = control.try_recv() {
+                match event {
+                    FaceEvent::Bounds(shape, lower, upper) => {
+                        tracker.calibrator.set_lower(shape, lower);
+                        tracker.calibrator.set_upper(shape, upper);
+                    }
+                    FaceEvent::Calibrate => {
+                        tracker.calibrator.start_calibration();
+                    }
+                    FaceEvent::CalibrateUpper(shape, frames) => {
+                        tracker
+                            .calibrator
+                            .start_upper_calibration(shape, frames as usize);
+                    }
+                }
+            }
+
             match tracker.track().unwrap() {
                 Some(report) => {
                     heartbeat.beat();
@@ -132,6 +179,42 @@ impl TrackCommand {
     }
 }
 
+fn run_control(listen: String, face: Sender<FaceEvent>) {
+    let mut control = match OscControl::bind(&listen) {
+        Ok(control) => {
+            tracing::info!(listen = %listen, "control listener started");
+            control
+        }
+        Err(error) => {
+            tracing::error!(%error, listen = %listen, "failed to bind control listener");
+            return;
+        }
+    };
+
+    loop {
+        let event = match control.receive() {
+            Ok(event) => event,
+            Err(error) => {
+                tracing::error!(%error, "control listener stopped");
+                break;
+            }
+        };
+
+        let face_event = match event {
+            ControlEvent::FaceBounds(shape, lower, upper) => FaceEvent::Bounds(shape, lower, upper),
+            ControlEvent::FaceCalibrate => FaceEvent::Calibrate,
+            ControlEvent::FaceCalibrateUpper(shape, frames) => {
+                FaceEvent::CalibrateUpper(shape, frames)
+            }
+        };
+
+        if face.send(face_event).is_err() {
+            // Face worker has stopped; nothing left to control.
+            break;
+        }
+    }
+}
+
 /// Per-eye gaze readout, rendered as `L(+0.12,-0.34)`.
 struct Gaze {
     side: &'static str,
@@ -156,6 +239,12 @@ impl Gaze {
 
 impl StatusBarItem for Gaze {
     fn render(&self) -> Cow<'static, str> {
-        format!("{}({:+.2},{:+.2})", self.side, self.pitch.get(), self.yaw.get()).into()
+        format!(
+            "{}({:+.2},{:+.2})",
+            self.side,
+            self.pitch.get(),
+            self.yaw.get()
+        )
+        .into()
     }
 }

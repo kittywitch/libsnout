@@ -3,7 +3,14 @@ use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use crate::{calibration::FaceShape, capture::{processing::{Crop, PreprocessConfig}, sensor::Gc0308Config}, pipeline::FilterParameters};
+use crate::{
+    calibration::FaceShape,
+    capture::{
+        processing::{Crop, PreprocessConfig},
+        sensor::Gc0308Config,
+    },
+    pipeline::FilterParameters,
+};
 
 #[derive(Debug, Error)]
 pub enum ConfigError {
@@ -72,6 +79,11 @@ pub fn load(path: impl AsRef<Path>) -> Result<Config, ConfigError> {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct ControlConfig {
+    pub listen: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct FaceShapeCalibration {
     pub shape: FaceShape,
     pub lower: f32,
@@ -91,6 +103,8 @@ pub struct Config {
 
     #[serde(default)]
     pub output: OutputConfig,
+
+    pub control: Option<ControlConfig>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]

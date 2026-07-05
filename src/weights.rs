@@ -1,6 +1,5 @@
 use std::marker::PhantomData;
 
-
 pub trait Shape: Copy + Into<usize> + From<usize> {
     fn count() -> usize;
 
@@ -9,7 +8,7 @@ pub trait Shape: Copy + Into<usize> + From<usize> {
     }
 }
 
-pub struct Weights<S, T=f32> {
+pub struct Weights<S, T = f32> {
     data: Vec<Option<T>>,
     _phantom: PhantomData<fn(S)>,
 }
@@ -36,12 +35,18 @@ impl<S: Shape, T> Weights<S, T> {
         self.data[index] = Some(value);
     }
 
-    pub fn get(&self, index: S) -> Option<T> where T: Copy {
+    pub fn get(&self, index: S) -> Option<T>
+    where
+        T: Copy,
+    {
         let index = index.into();
         self.data[index]
     }
 
-    pub fn fill_with(&mut self, outputs: &[T], map: &[Option<S>]) where T: Copy {
+    pub fn fill_with(&mut self, outputs: &[T], map: &[Option<S>])
+    where
+        T: Copy,
+    {
         self.clear();
 
         for (i, &shape) in map.iter().enumerate() {
@@ -52,7 +57,10 @@ impl<S: Shape, T> Weights<S, T> {
         }
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = (S, T)> + '_ where T: Copy {
+    pub fn iter(&self) -> impl Iterator<Item = (S, T)> + '_
+    where
+        T: Copy,
+    {
         S::iter().filter_map(|s| {
             let index = s.into();
             self.data[index].map(|v| (s, v))

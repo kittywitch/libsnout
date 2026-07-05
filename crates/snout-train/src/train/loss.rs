@@ -52,7 +52,11 @@ impl<B: Backend> DeconfuseLoss<B> {
 
         // factor[b, i, j] = clamp_min(1 - target[b, i] * deconf[i, j], 0)
         let drivers = target.clone().reshape([batch, channels, 1]);
-        let factor = drivers.mul(self.deconf.clone()).neg().add_scalar(1.0).clamp_min(0.0);
+        let factor = drivers
+            .mul(self.deconf.clone())
+            .neg()
+            .add_scalar(1.0)
+            .clamp_min(0.0);
 
         // weight[b, j] = product over the driver axis.
         let weight = factor.prod_dim(1).reshape([batch, channels]);
@@ -82,8 +86,9 @@ pub struct EvennessLoss<B: Backend> {
 impl<B: Backend> EvennessLoss<B> {
     pub fn new(device: &B::Device) -> Self {
         let channels = EVEN_WEIGHTS.len();
-        let even_w = Tensor::<B, 1>::from_data(TensorData::new(EVEN_WEIGHTS.to_vec(), [channels]), device)
-            .reshape([1, channels]);
+        let even_w =
+            Tensor::<B, 1>::from_data(TensorData::new(EVEN_WEIGHTS.to_vec(), [channels]), device)
+                .reshape([1, channels]);
         Self { even_w }
     }
 
@@ -96,7 +101,11 @@ impl<B: Backend> EvennessLoss<B> {
         label_l: Tensor<B, 2>,
         label_r: Tensor<B, 2>,
     ) -> Tensor<B, 1> {
-        let agree = (label_l - label_r).abs().neg().add_scalar(1.0).clamp(0.0, 1.0);
+        let agree = (label_l - label_r)
+            .abs()
+            .neg()
+            .add_scalar(1.0)
+            .clamp(0.0, 1.0);
         let diff_sq = (pred_l - pred_r).powf_scalar(2.0);
         let numerator = (self.even_w.clone() * agree.clone() * diff_sq).sum();
         numerator / agree.sum().clamp_min(1.0)
@@ -121,7 +130,9 @@ mod tests {
         // weight[lid] = (1 - squint*1.0) = 0 -> the lid error is fully ignored.
         // weight[widen]=1, weight[squint]=1, weight[brow]=(1-squint*1.0)=0.
         // numerator = 0 (only lid has error, weight 0). loss == 0.
-        let loss = DeconfuseLoss::new(&device).forward(pred, target).into_scalar();
+        let loss = DeconfuseLoss::new(&device)
+            .forward(pred, target)
+            .into_scalar();
         assert!(loss.abs() < 1e-6, "expected ~0, got {loss}");
     }
 

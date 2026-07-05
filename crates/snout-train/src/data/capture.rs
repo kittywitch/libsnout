@@ -32,8 +32,12 @@ pub fn read_bin(path: impl AsRef<Path>) -> Result<Vec<Frame>, String> {
             continue;
         }
 
-        let Some(left) = process_image(&raw_frame.jpeg_left, true) else { continue };
-        let Some(right) = process_image(&raw_frame.jpeg_right, false) else { continue };
+        let Some(left) = process_image(&raw_frame.jpeg_left, true) else {
+            continue;
+        };
+        let Some(right) = process_image(&raw_frame.jpeg_right, false) else {
+            continue;
+        };
 
         let meta = &raw_frame.meta;
         frames.push(Frame {
@@ -146,7 +150,11 @@ fn process_image(jpeg: &[u8], flip: bool) -> Option<[f32; IMAGE_HEIGHT * IMAGE_W
 
         let n = pixels.len() as f32;
         let mean = pixels.iter().map(|&p| p as f32).sum::<f32>() / n;
-        let variance = pixels.iter().map(|&p| (p as f32 - mean).powi(2)).sum::<f32>() / n;
+        let variance = pixels
+            .iter()
+            .map(|&p| (p as f32 - mean).powi(2))
+            .sum::<f32>()
+            / n;
 
         variance.sqrt() < 2.0
     }
@@ -176,7 +184,11 @@ fn process_image(jpeg: &[u8], flip: bool) -> Option<[f32; IMAGE_HEIGHT * IMAGE_W
 
     let img = resize(&img);
     let img = equalize_histogram(&img);
-    let img = if flip { image::imageops::flip_horizontal(&img) } else { img };
+    let img = if flip {
+        image::imageops::flip_horizontal(&img)
+    } else {
+        img
+    };
 
     Some(from_fn(|i| img.as_raw()[i] as f32 / 255.0))
 }

@@ -75,7 +75,12 @@ impl<'a> Reporter<'a> {
         every: usize,
         total: usize,
     ) -> Self {
-        Self { callback, phase, every, total }
+        Self {
+            callback,
+            phase,
+            every,
+            total,
+        }
     }
 
     /// Emits a single [`Progress`] for `step` -- when it lands on the cadence (or is the

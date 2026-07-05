@@ -3,8 +3,8 @@ use std::path::Path;
 use std::time::{Duration, Instant};
 
 use crate::capture::Frame;
-use snout_sample_file::{CaptureWriter, FrameMeta, RawFrame, RoutineState};
 use crate::sample::net::{Position, Routine};
+use snout_sample_file::{CaptureWriter, FrameMeta, RawFrame, RoutineState};
 
 const JPEG_QUALITY: u8 = 85;
 const POSITION_FRESHNESS: Duration = Duration::from_millis(200);
@@ -62,11 +62,29 @@ impl Phase {
 
     fn expr(&self) -> Expr {
         match self {
-            Phase::Gaze | Phase::FreeExpr => Expr { lid: 1.0, ..Default::default() },
-            Phase::Blink => Expr { lid: 0.0, ..Default::default() },
-            Phase::Widen => Expr { lid: 1.0, widen: 1.0, ..Default::default() },
-            Phase::Squint => Expr { lid: 1.0, squint: 1.0, ..Default::default() },
-            Phase::Brow => Expr { lid: 1.0, brow_angry: 1.0, ..Default::default() },
+            Phase::Gaze | Phase::FreeExpr => Expr {
+                lid: 1.0,
+                ..Default::default()
+            },
+            Phase::Blink => Expr {
+                lid: 0.0,
+                ..Default::default()
+            },
+            Phase::Widen => Expr {
+                lid: 1.0,
+                widen: 1.0,
+                ..Default::default()
+            },
+            Phase::Squint => Expr {
+                lid: 1.0,
+                squint: 1.0,
+                ..Default::default()
+            },
+            Phase::Brow => Expr {
+                lid: 1.0,
+                brow_angry: 1.0,
+                ..Default::default()
+            },
         }
     }
 }
