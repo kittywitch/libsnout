@@ -21,7 +21,7 @@ rustPlatform.buildRustPackage {
   ];
 
   buildInputs = [
-    libtorch
+    libtorch.dev
   ];
 
   postFixup = let
@@ -29,7 +29,7 @@ rustPlatform.buildRustPackage {
       llvm
       (onnxruntime.override { cudaSupport = true; })
       vulkan-loader
-        libtorch
+      libtorch
     ];
   in
     ''
