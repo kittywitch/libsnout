@@ -36,7 +36,7 @@ rustPlatform.buildRustPackage {
   in
     ''
           wrapProgram "$out/bin/snout-cli" \
-            --set CUDA_PATH "${cudatoolkit} \
+            --set CUDA_PATH "${cudatoolkit}" \
             --prefix LD_LIBRARY_PATH : "${libs}"
   '';
 
