@@ -23,6 +23,7 @@ rustPlatform.buildRustPackage {
       llvm
       (onnxruntime.override { cudaSupport = true; })
       vulkan-loader
+      libtorch-bin
     ];
   in
     ''
