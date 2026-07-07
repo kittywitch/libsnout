@@ -1,4 +1,4 @@
-{ pkg-config, libtorch-bin, rustPlatform, makeWrapper, onnxruntime, vulkan-loader, llvm, lib }:
+{ pkg-config, libtorch-bin, rustPlatform, makeWrapper, onnxruntime, vulkan-loader, llvm, lib, cudatoolkit }:
 let
   libtorch = libtorch-bin.override { cudaSupport = true; };
 in
@@ -30,10 +30,13 @@ rustPlatform.buildRustPackage {
       (onnxruntime.override { cudaSupport = true; })
       vulkan-loader
       libtorch
+      libtorch.dev
+        "/run/opengl-driver"
     ];
   in
     ''
           wrapProgram "$out/bin/snout-cli" \
+            --set CUDA_PATH "${cudatoolkit} \
             --prefix LD_LIBRARY_PATH : "${libs}"
   '';
 
