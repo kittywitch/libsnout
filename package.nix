@@ -1,5 +1,7 @@
 { pkg-config, libtorch-bin, rustPlatform, makeWrapper, onnxruntime, vulkan-loader, llvm, lib }:
-
+let
+  libtorch = libtorch-bin.override { cudaSupport = true; };
+in
 rustPlatform.buildRustPackage {
   pname = "snout-cli";
   version = "main";
@@ -11,11 +13,15 @@ rustPlatform.buildRustPackage {
   };
   cargoBuildFlags = [ "--package" "snout-cli" "-F" "torch-cuda"];
 
+  LIBTORCH = libtorch;
   nativeBuildInputs = [
     pkg-config
     rustPlatform.bindgenHook
     makeWrapper
-    (libtorch-bin.override { cudaSupport = true; })
+  ];
+
+  buildInputs = [
+    libtorch
   ];
 
   postFixup = let
@@ -23,7 +29,7 @@ rustPlatform.buildRustPackage {
       llvm
       (onnxruntime.override { cudaSupport = true; })
       vulkan-loader
-      (libtorch-bin.override { cudaSupport = true; })
+        libtorch
     ];
   in
     ''
