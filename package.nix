@@ -12,8 +12,9 @@ rustPlatform.buildRustPackage {
     lockFile = ./Cargo.lock;
   };
   cargoBuildFlags = [ "--package" "snout-cli" "--no-default-features" "-F" "torch-cuda"];
-
-  env.LIBTORCH = libtorch.dev;
+    LIBTORCH="${libtorch}";
+    LIBTORCH_LIB="${libtorch}/lib";
+    LIBTORCH_INCLUDE="${libtorch.dev}/include";
   nativeBuildInputs = [
     pkg-config
     rustPlatform.bindgenHook
