@@ -1,4 +1,4 @@
-{ pkg-config, rustPlatform, makeWrapper, onnxruntime, vulkan-loader, llvm, lib }:
+{ pkg-config, libtorch-bin, rustPlatform, makeWrapper, onnxruntime, vulkan-loader, llvm, lib }:
 
 rustPlatform.buildRustPackage {
   pname = "snout-cli";
@@ -9,12 +9,13 @@ rustPlatform.buildRustPackage {
   cargoLock = {
     lockFile = ./Cargo.lock;
   };
-  cargoBuildFlags = [ "--package" "snout-cli" ];
+  cargoBuildFlags = [ "--package" "snout-cli" "-F" "torch-cuda"];
 
   nativeBuildInputs = [
     pkg-config
     rustPlatform.bindgenHook
     makeWrapper
+    libtorch-bin
   ];
 
   postFixup = let
