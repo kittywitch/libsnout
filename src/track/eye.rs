@@ -2,7 +2,7 @@ use crate::{
     calibration::{EyeCalibrator, EyeShape},
     capture::{
         CameraError, Frame, StereoCamera,
-        discovery::{CameraInfo, CameraSource},
+        discovery::{CameraInfo, CameraSource, resolve_source},
         processing::FramePreprocessor,
     },
     config::Config,
@@ -49,15 +49,8 @@ impl EyeTracker {
 
         tracker.pipeline.set_model(config.eye.model.as_ref())?;
 
-        let left_camera = cameras
-            .iter()
-            .find(|s| s.display_name() == config.eye.left.camera)
-            .map(|c| c.source.clone());
-
-        let right_camera = cameras
-            .iter()
-            .find(|s| s.display_name() == config.eye.right.camera)
-            .map(|c| c.source.clone());
+        let left_camera = resolve_source(cameras, &config.eye.left.camera);
+        let right_camera = resolve_source(cameras, &config.eye.right.camera);
 
         tracker.set_source(left_camera, right_camera);
 
