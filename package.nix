@@ -15,7 +15,7 @@ rustPlatform.buildRustPackage {
     pkg-config
     rustPlatform.bindgenHook
     makeWrapper
-    libtorch-bin
+    (libtorch-bin.override { cudaSupport = true; })
   ];
 
   postFixup = let
@@ -23,7 +23,7 @@ rustPlatform.buildRustPackage {
       llvm
       (onnxruntime.override { cudaSupport = true; })
       vulkan-loader
-      libtorch-bin
+      (libtorch-bin.override { cudaSupport = true; })
     ];
   in
     ''
