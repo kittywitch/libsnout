@@ -13,7 +13,7 @@ rustPlatform.buildRustPackage {
   };
   cargoBuildFlags = [ "--package" "snout-cli" "--no-default-features" "-F" "torch-cuda"];
 
-  LIBTORCH = libtorch.dev;
+  env.LIBTORCH = libtorch.dev;
   nativeBuildInputs = [
     pkg-config
     rustPlatform.bindgenHook
@@ -36,6 +36,7 @@ rustPlatform.buildRustPackage {
   in
     ''
           wrapProgram "$out/bin/snout-cli" \
+            --set LIBTORCH "${libtorch}" \
             --set CUDA_PATH "${cudatoolkit}" \
             --prefix LD_LIBRARY_PATH : "${libs}"
   '';
