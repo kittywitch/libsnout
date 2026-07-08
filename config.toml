@@ -1,5 +1,5 @@
 #
-# Documentation on how to configure libsnout can be found under CONFIGURING.md
+# Documentation on how to configure Snout can be found under configuring.md
 #
 
 #libonnxruntime = "/usr/lib64/libonnxruntime.so"
