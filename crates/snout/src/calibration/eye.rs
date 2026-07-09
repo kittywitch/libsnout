@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use crate::calibration::Bounds;
 use crate::weights::{Shape, Weights};
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[repr(u8)]
 pub enum EyeShape {
     LeftEyePitch,
@@ -18,6 +18,10 @@ pub enum EyeShape {
     RightEyeWiden,
     RightEyeBrow,
     RightEyeSquint,
+
+    EyePitchVersion,
+    EyeYawVersion,
+    EyeYawVergence,
 }
 
 impl From<EyeShape> for usize {
@@ -37,20 +41,20 @@ impl From<usize> for EyeShape {
 impl Shape for EyeShape {
     fn count() -> usize {
         const {
-            assert!(Self::RightEyeSquint as usize + 1 == 12);
+            assert!(Self::EyeYawVergence as usize + 1 == 15);
         }
 
-        Self::RightEyeSquint as usize + 1
+        Self::EyeYawVergence as usize + 1
     }
 }
 
 impl EyeShape {
     pub const fn count() -> usize {
         const {
-            assert!(Self::RightEyeSquint as usize + 1 == 12);
+            assert!(Self::EyeYawVergence as usize + 1 == 15);
         }
 
-        Self::RightEyeSquint as usize + 1
+        Self::EyeYawVergence as usize + 1
     }
 
     pub fn from_model_name(name: &str) -> Option<Self> {
@@ -68,6 +72,7 @@ impl EyeShape {
             "leftEyeWiden" => Some(Self::LeftEyeWiden),
             "leftEyeBrow" => Some(Self::LeftEyeBrow),
             "leftEyeSquint" => Some(Self::LeftEyeSquint),
+
             _ => None,
         }
     }
@@ -81,25 +86,28 @@ impl EyeShape {
             Self::RightEyePitch => Some("/avatar/parameters/v2/EyeRightY"),
             Self::RightEyeYaw => Some("/avatar/parameters/v2/EyeRightX"),
             Self::RightEyeLid => Some("/avatar/parameters/v2/EyeLidRight"),
+
             _ => None,
         }
     }
 
-    pub(crate) fn to_babble(self) -> &'static str {
+    pub(crate) fn to_babble(self) -> Option<&'static str> {
         match self {
-            Self::LeftEyePitch => "/leftEyeY",
-            Self::LeftEyeYaw => "/leftEyeX",
-            Self::LeftEyeLid => "/leftEyeLid",
-            Self::LeftEyeWiden => "/leftEyeWiden",
-            Self::LeftEyeBrow => "/leftEyeBrow",
-            Self::LeftEyeSquint => "/leftEyeSquint",
+            Self::LeftEyePitch => Some("/leftEyeY"),
+            Self::LeftEyeYaw => Some("/leftEyeX"),
+            Self::LeftEyeLid => Some("/leftEyeLid"),
+            Self::LeftEyeWiden => Some("/leftEyeWiden"),
+            Self::LeftEyeBrow => Some("/leftEyeBrow"),
+            Self::LeftEyeSquint => Some("/leftEyeSquint"),
 
-            Self::RightEyePitch => "/rightEyeY",
-            Self::RightEyeYaw => "/rightEyeX",
-            Self::RightEyeLid => "/rightEyeLid",
-            Self::RightEyeWiden => "/rightEyeWiden",
-            Self::RightEyeBrow => "/rightEyeBrow",
-            Self::RightEyeSquint => "/rightEyeSquint",
+            Self::RightEyePitch => Some("/rightEyeY"),
+            Self::RightEyeYaw => Some("/rightEyeX"),
+            Self::RightEyeLid => Some("/rightEyeLid"),
+            Self::RightEyeWiden => Some("/rightEyeWiden"),
+            Self::RightEyeBrow => Some("/rightEyeBrow"),
+            Self::RightEyeSquint => Some("/rightEyeSquint"),
+
+            _ => None,
         }
     }
 
@@ -146,6 +154,9 @@ impl EyeFusion {
         bounds[EyeShape::LeftEyeYaw as usize] = Bounds::new_11();
         bounds[EyeShape::RightEyePitch as usize] = Bounds::new_11();
         bounds[EyeShape::RightEyeYaw as usize] = Bounds::new_11();
+
+        bounds[EyeShape::EyePitchVersion as usize] = Bounds::new_11();
+        bounds[EyeShape::EyeYawVersion as usize] = Bounds::new_11();
 
         Self {
             bounds,
@@ -251,6 +262,15 @@ impl EyeFusion {
         // out as either one closes.
         let vergence_confidence = left_weight.min(right_weight);
         let vergence = ((right_yaw - left_yaw) * 0.5 * vergence_confidence).max(0.);
+
+        // Apply each decomposed channel's bounds: capping the vergence bound
+        // limits eye crossing, capping the version bounds limits gaze range. With
+        // the default (identity) bounds this is a no-op.
+        let version_pitch = self.bounds[EyeShape::EyePitchVersion as usize].remap(version_pitch);
+        let version_yaw = self.bounds[EyeShape::EyeYawVersion as usize].remap(version_yaw);
+        let vergence = self.bounds[EyeShape::EyeYawVergence as usize].remap(vergence);
+
+        // Reconstruct per-eye gaze from the bounded decomposition.
         let left_eye_yaw = version_yaw - vergence;
         let right_eye_yaw = version_yaw + vergence;
 
@@ -259,6 +279,10 @@ impl EyeFusion {
 
         let left_lid = self.bounds[EyeShape::LeftEyeLid as usize].remap(left_open);
         let right_lid = self.bounds[EyeShape::RightEyeLid as usize].remap(right_open);
+
+        self.weights.set(EyeShape::EyePitchVersion, version_pitch);
+        self.weights.set(EyeShape::EyeYawVersion, version_yaw);
+        self.weights.set(EyeShape::EyeYawVergence, vergence);
 
         self.weights.set(EyeShape::LeftEyePitch, pitch);
         self.weights

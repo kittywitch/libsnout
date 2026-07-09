@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::{
-    calibration::{EyeCenter, FaceShape},
+    calibration::{Bounds, EyeCenter, EyeShape, FaceShape},
     capture::{
         processing::{Crop, PreprocessConfig},
         sensor::Gc0308Config,
@@ -108,9 +108,19 @@ pub struct Config {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct EyeShapeCalibration {
+    pub shape: EyeShape,
+    #[serde(flatten)]
+    pub bounds: Bounds,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct EyesConfig {
     pub model: Option<PathBuf>,
     pub filter: Option<EyeFilterParameters>,
+
+    #[serde(default)]
+    pub calibration: Vec<EyeShapeCalibration>,
 
     pub left: EyeConfig,
     pub right: EyeConfig,

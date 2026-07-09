@@ -1,6 +1,4 @@
 use std::{
-    borrow::Cow,
-    cell::Cell,
     sync::mpsc::{self, Receiver, Sender},
     thread,
     thread::sleep,
@@ -16,7 +14,7 @@ use snout::{
     track::{eye::EyeTracker, face::FaceTracker, initialize_runtime, output::Output},
 };
 
-use crate::status::{Heartbeat, Pair, Rate, StatusBar, StatusBarItem};
+use crate::status::{Float, Heartbeat, Pair, Rate, StatusBar, Vector};
 
 const IDLE_RETRY: Duration = Duration::from_millis(10);
 
@@ -113,13 +111,13 @@ impl TrackCommand {
         let tick_rate = status.add(Rate::new("TICK", 0));
 
         let eye_debug = self.eye_debug.then(|| {
-            let left = status.add(Gaze::new("L"));
-            let right = status.add(Gaze::new("R"));
+            let version = status.add(Vector::new("VERSION"));
+            let vergence = status.add(Float::new("VERGENCE"));
             let lids = status.add(Pair::new("LIDS"));
             let brow = status.add(Pair::new("BROW"));
             let widen = status.add(Pair::new("WIDEN"));
             let squint = status.add(Pair::new("SQUINT"));
-            (left, right, lids, brow, widen, squint)
+            (version, vergence, lids, brow, widen, squint)
         });
 
         loop {
@@ -127,19 +125,12 @@ impl TrackCommand {
                 Some(report) => {
                     heartbeat.beat();
 
-                    if let Some((left, right, lids, brow, widen, squint)) = &eye_debug {
-                        left.set(
-                            report.weights.get(EyeShape::LeftEyePitch).unwrap_or(0.),
-                            report.weights.get(EyeShape::LeftEyeYaw).unwrap_or(0.),
-                        );
-                        right.set(
-                            report.weights.get(EyeShape::RightEyePitch).unwrap_or(0.),
-                            report.weights.get(EyeShape::RightEyeYaw).unwrap_or(0.),
-                        );
+                    if let Some((version, vergence, lids, brow, widen, squint)) = &eye_debug {
                         lids.set(
                             report.weights.get(EyeShape::LeftEyeLid).unwrap_or(0.),
                             report.weights.get(EyeShape::RightEyeLid).unwrap_or(0.),
                         );
+
                         brow.set(
                             report.weights.get(EyeShape::LeftEyeBrow).unwrap_or(0.),
                             report.weights.get(EyeShape::RightEyeBrow).unwrap_or(0.),
@@ -152,6 +143,13 @@ impl TrackCommand {
                             report.weights.get(EyeShape::LeftEyeSquint).unwrap_or(0.),
                             report.weights.get(EyeShape::RightEyeSquint).unwrap_or(0.),
                         );
+
+                        version.set(
+                            report.weights.get(EyeShape::EyePitchVersion).unwrap_or(0.),
+                            report.weights.get(EyeShape::EyeYawVersion).unwrap_or(0.),
+                        );
+
+                        vergence.set(report.weights.get(EyeShape::EyeYawVergence).unwrap_or(0.));
                     }
 
                     output.send_eyes(report.weights);
@@ -212,39 +210,5 @@ fn run_control(listen: String, face: Sender<FaceEvent>) {
             // Face worker has stopped; nothing left to control.
             break;
         }
-    }
-}
-
-/// Per-eye gaze readout, rendered as `L(+0.12,-0.34)`.
-struct Gaze {
-    side: &'static str,
-    pitch: Cell<f32>,
-    yaw: Cell<f32>,
-}
-
-impl Gaze {
-    fn new(side: &'static str) -> Self {
-        Self {
-            side,
-            pitch: Cell::new(0.0),
-            yaw: Cell::new(0.0),
-        }
-    }
-
-    fn set(&self, pitch: f32, yaw: f32) {
-        self.pitch.set(pitch);
-        self.yaw.set(yaw);
-    }
-}
-
-impl StatusBarItem for Gaze {
-    fn render(&self) -> Cow<'static, str> {
-        format!(
-            "{}({:+.2},{:+.2})",
-            self.side,
-            self.pitch.get(),
-            self.yaw.get()
-        )
-        .into()
     }
 }

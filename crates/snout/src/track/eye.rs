@@ -69,6 +69,12 @@ impl EyeTracker {
             tracker.calibrator.set_right_center(center);
         }
 
+        for calibration in &config.eye.calibration {
+            tracker
+                .calibrator
+                .set_bounds(calibration.shape, calibration.bounds);
+        }
+
         // Left preprocessor
         tracker.left_preprocessor.set_crop(config.eye.left.crop);
 

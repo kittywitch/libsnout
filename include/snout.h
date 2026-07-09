@@ -158,6 +158,9 @@ enum EyeShape
   EyeShape_RightEyeWiden,
   EyeShape_RightEyeBrow,
   EyeShape_RightEyeSquint,
+  EyeShape_EyePitchVersion,
+  EyeShape_EyeYawVersion,
+  EyeShape_EyeYawVergence,
 };
 #ifndef __cplusplus
 #if __STDC_VERSION__ >= 202311L
@@ -178,6 +181,9 @@ typedef struct Config Config;
 
 typedef struct EtvrEmitter EtvrEmitter;
 
+/**
+ * Spatial fusion of raw per-eye gaze estimates into a coherent binocular gaze.
+ */
 typedef struct EyeFusion EyeFusion;
 
 typedef struct EyePipeline EyePipeline;

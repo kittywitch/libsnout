@@ -4,7 +4,9 @@ mod face;
 pub use eye::{EyeCenter, EyeFusion, EyeShape};
 pub use face::{FaceShape, ManualFaceCalibrator};
 
-#[derive(Copy, Clone, Debug, PartialEq)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[repr(C)]
 pub struct Bounds {
     pub min: f32,

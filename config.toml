@@ -299,6 +299,83 @@ model = "faceModel.onnx" # If not specified, tracking will be disabled.
 # lower = 0.0
 # upper = 1.0
 
+# [[eye.calibration]]
+# shape = "LeftEyeLid"
+# min = 0.0
+# max = 1.0
+# lower = 0.0
+# upper = 1.0
+
+# [[eye.calibration]]
+# shape = "LeftEyeWiden"
+# min = 0.0
+# max = 1.0
+# lower = 0.0
+# upper = 1.0
+
+# [[eye.calibration]]
+# shape = "LeftEyeBrow"
+# min = 0.0
+# max = 1.0
+# lower = 0.0
+# upper = 1.0
+
+# [[eye.calibration]]
+# shape = "LeftEyeSquint"
+# min = 0.0
+# max = 1.0
+# lower = 0.0
+# upper = 1.0
+
+# [[eye.calibration]]
+# shape = "RightEyeLid"
+# min = 0.0
+# max = 1.0
+# lower = 0.0
+# upper = 1.0
+
+# [[eye.calibration]]
+# shape = "RightEyeWiden"
+# min = 0.0
+# max = 1.0
+# lower = 0.0
+# upper = 1.0
+
+# [[eye.calibration]]
+# shape = "RightEyeBrow"
+# min = 0.0
+# max = 1.0
+# lower = 0.0
+# upper = 1.0
+
+# [[eye.calibration]]
+# shape = "RightEyeSquint"
+# min = 0.0
+# max = 1.0
+# lower = 0.0
+# upper = 1.0
+
+# [[eye.calibration]]
+# shape = "EyePitchVersion"
+# min = -1.0
+# max = 1.0
+# lower = -1.0
+# upper = 1.0
+
+# [[eye.calibration]]
+# shape = "EyeYawVersion"
+# min = -1.0
+# max = 1.0
+# lower = -1.0
+# upper = 1.0
+
+# [[eye.calibration]]
+# shape = "EyeYawVergence"
+# min = 0.0
+# max = 1.0
+# lower = 0.0
+# upper = 1.0
+
 [sample.overlay]
 path = "/your/path/to/BabbleCalibration.x86_64"
 mode = "Debug" # Can be: Debug, OpenVr, OpenXr

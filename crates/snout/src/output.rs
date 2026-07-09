@@ -69,12 +69,14 @@ impl BabbleEmitter {
 
     pub fn process_eyes(&mut self, weights: &Weights<EyeShape>, transport: &mut OscTransport) {
         for (shape, value) in weights.iter() {
-            let msg = OscMessage {
-                addr: shape.to_babble().to_string(),
-                args: vec![OscType::Float(value)],
-            };
+            if let Some(addr) = shape.to_babble() {
+                let msg = OscMessage {
+                    addr: addr.to_string(),
+                    args: vec![OscType::Float(value)],
+                };
 
-            transport.send(msg);
+                transport.send(msg);
+            }
         }
     }
 }

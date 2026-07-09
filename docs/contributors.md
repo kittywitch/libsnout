@@ -13,7 +13,7 @@ export PATH=$PATH:$HOME/.cargo/bin
 Once cbindgen is installed and located on your PATH, `snout.h` can be generated via:
 
 ```sh
-cbindgen --config cbindgen.toml --output include/snout.h
+cbindgen --config cbindgen.toml --output include/snout.h --crate snout
 ```
 
 The generated `snout.h` file will then be located under `include/snout.h`

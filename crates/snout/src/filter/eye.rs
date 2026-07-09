@@ -152,18 +152,11 @@ impl EyeFilter {
             return;
         }
 
-        // Recover the shared direction and the crossing from the per-eye yaw.
-        // Reconstructing `version ± vergence` at the end is exactly lossless, so
-        // an unfiltered frame comes out identical to how it went in.
-        let left_yaw = fused.get(EyeShape::LeftEyeYaw).unwrap_or(0.);
-        let right_yaw = fused.get(EyeShape::RightEyeYaw).unwrap_or(0.);
-        let left_pitch = fused.get(EyeShape::LeftEyePitch).unwrap_or(0.);
-        let right_pitch = fused.get(EyeShape::RightEyePitch).unwrap_or(0.);
-
-        let version_yaw = (left_yaw + right_yaw) * 0.5;
-        let vergence = (right_yaw - left_yaw) * 0.5;
-        // Pitch is shared already; average defensively in case they differ.
-        let pitch_in = (left_pitch + right_pitch) * 0.5;
+        // Read the decomposed gaze straight from the fused channels (produced by
+        // EyeFusion) rather than re-deriving it from the per-eye values.
+        let version_pitch = fused.get(EyeShape::EyePitchVersion).unwrap_or(0.);
+        let version_yaw = fused.get(EyeShape::EyeYawVersion).unwrap_or(0.);
+        let vergence = fused.get(EyeShape::EyeYawVergence).unwrap_or(0.);
 
         // Lids double as the openness / blink signal. Missing lids are treated as
         // open so we never coast without evidence. They are always filtered so the
@@ -176,9 +169,9 @@ impl EyeFilter {
         // Coast gaze only when *both* eyes are shut; a wink still tracks off the
         // open eye (its gaze already drives the fused version).
         let openness = left_open.max(right_open);
-        let (pitch, version_yaw, vergence) = if openness > self.params.coast_openness {
+        let (version_pitch, version_yaw, vergence) = if openness > self.params.coast_openness {
             (
-                self.pitch.filter(pitch_in, dt),
+                self.pitch.filter(version_pitch, dt),
                 self.yaw.filter(version_yaw, dt),
                 self.vergence.filter(vergence, dt),
             )
@@ -186,11 +179,18 @@ impl EyeFilter {
             (self.pitch.hold(), self.yaw.hold(), self.vergence.hold())
         };
 
+        // Reconstruct per-eye gaze from the filtered decomposition.
         let left_yaw = version_yaw - vergence;
         let right_yaw = version_yaw + vergence;
 
-        self.weights.set(EyeShape::LeftEyePitch, pitch);
-        self.weights.set(EyeShape::RightEyePitch, pitch);
+        // Keep the (filtered) decomposed channels in the output for debugging and
+        // downstream use; they are not sent to OSC.
+        self.weights.set(EyeShape::EyePitchVersion, version_pitch);
+        self.weights.set(EyeShape::EyeYawVersion, version_yaw);
+        self.weights.set(EyeShape::EyeYawVergence, vergence);
+
+        self.weights.set(EyeShape::LeftEyePitch, version_pitch);
+        self.weights.set(EyeShape::RightEyePitch, version_pitch);
         self.weights.set(EyeShape::LeftEyeYaw, left_yaw);
         self.weights.set(EyeShape::RightEyeYaw, right_yaw);
         self.weights.set(EyeShape::LeftEyeLid, left_lid);
