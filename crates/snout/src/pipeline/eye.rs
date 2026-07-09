@@ -4,11 +4,8 @@ use crate::{
     calibration::EyeShape,
     capture::Frame,
     pipeline::{
-        FilterParameters, PipelineError,
-        internal::{
-            FrameToBurnTensor, eye_compositor::EyeCompositor, inference::EyeInference,
-            one_euro_filter::OneEuroFilter,
-        },
+        PipelineError,
+        internal::{FrameToBurnTensor, eye_compositor::EyeCompositor, inference::EyeInference},
     },
     weights::Weights,
 };
@@ -26,7 +23,6 @@ pub struct EyePipeline {
     transfer: FrameToBurnTensor,
     inference: Option<EyeInference>,
     collector: EyeCompositor,
-    filter: OneEuroFilter,
     weights: Weights<EyeShape>,
     output_map: Vec<Option<EyeShape>>,
 }
@@ -37,7 +33,6 @@ impl EyePipeline {
             transfer: FrameToBurnTensor::new(8, 128, 128),
             inference: None,
             collector: EyeCompositor::new(),
-            filter: OneEuroFilter::new(EyeShape::count()),
             weights: Weights::new(),
             output_map: LEGACY_OUTPUT_MAP.to_vec(),
         }
@@ -61,24 +56,14 @@ impl EyePipeline {
                 }
             };
 
-            self.filter = OneEuroFilter::new(inference.output_count());
             self.output_map = output_map;
             self.inference = Some(inference);
         } else {
             self.inference = None;
             self.output_map = LEGACY_OUTPUT_MAP.to_vec();
-            self.filter = OneEuroFilter::new(EyeShape::count());
         }
 
         Ok(())
-    }
-
-    pub fn filter(&self) -> FilterParameters {
-        self.filter.parameters
-    }
-
-    pub fn set_filter(&mut self, parameters: FilterParameters) {
-        self.filter.parameters = parameters;
     }
 
     pub fn run(
@@ -98,9 +83,8 @@ impl EyePipeline {
             .transfer_composite(mat, &mut inference.input_tensor);
 
         let weights = inference.run()?;
-        let filtered_weights = self.filter.filter(weights);
 
-        self.weights.fill_with(filtered_weights, &self.output_map);
+        self.weights.fill_with(weights, &self.output_map);
 
         Ok(Some(&self.weights))
     }

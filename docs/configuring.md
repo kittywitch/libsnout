@@ -201,21 +201,40 @@ upper = 0.6
 
 ## Filter Settings
 
-Filter settings for the eye and face tracking pipelines can be changed by adjusting the values of the `[eye.filter]` and `[face.filter]` tables in the configuration file, like so:
+Filter settings for the eye and face tracking pipelines can be changed by adjusting the `[eye.filter]` and `[face.filter]` tables in the configuration file. Omit a table to use the defaults.
+
+The face is smoothed by a single per-channel [One-Euro filter](https://gery.casiez.net/1euro/) (`min_cutoff` sets the smoothing at rest, `beta` how quickly it backs off for fast motion):
 
 ```toml
-[eye.filter]
-enable = true
-min_cutoff = 0.5
-beta = 3.0
-
-# <...>
-
 [face.filter]
 enable = true
 min_cutoff = 0.5
 beta = 3.0
 ```
+
+The eyes are smoothed *after* fusion, so each part of the gaze is tuned separately — the shared look direction (`version`) is kept responsive for saccades, while eye crossing (`vergence`) is smoothed harder. `coast_openness` holds gaze steady while both eyes are shut (a blink):
+
+```toml
+[eye.filter]
+enable = true
+coast_openness = 0.1
+version = { min_cutoff = 0.5, beta = 3.0 }
+vergence = { min_cutoff = 0.3, beta = 0.5 }
+lid = { min_cutoff = 2.0, beta = 5.0 }
+expression = { min_cutoff = 0.8, beta = 2.0 }
+```
+
+## Eye Centering
+
+The value the model reports as "looking straight ahead" can drift from the true center, independently for each eye. You can nudge an eye's center in raw `[0,1]` model space (where `0.5` is the model's own center) with the `center` key under `[eye.left]` / `[eye.right]`:
+
+```toml
+[eye.left]
+camera = "..."
+center = { yaw = 0.5, pitch = 0.5 }
+```
+
+Moving `yaw`/`pitch` below `0.5` shifts that eye's center one way and above `0.5` the other; the full gaze range is preserved either way. Omit the key to leave the eye uncentered.
 
 ## Sampling overlay
 

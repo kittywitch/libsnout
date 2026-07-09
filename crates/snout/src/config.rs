@@ -4,12 +4,12 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::{
-    calibration::FaceShape,
+    calibration::{EyeCenter, FaceShape},
     capture::{
         processing::{Crop, PreprocessConfig},
         sensor::Gc0308Config,
     },
-    pipeline::FilterParameters,
+    filter::{EyeFilterParameters, FaceFilterParameters},
 };
 
 #[derive(Debug, Error)]
@@ -109,9 +109,8 @@ pub struct Config {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct EyesConfig {
-    pub link: Option<bool>,
     pub model: Option<PathBuf>,
-    pub filter: Option<FilterParameters>,
+    pub filter: Option<EyeFilterParameters>,
 
     pub left: EyeConfig,
     pub right: EyeConfig,
@@ -120,6 +119,7 @@ pub struct EyesConfig {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct EyeConfig {
     pub camera: String,
+    pub center: Option<EyeCenter>,
     #[serde(default)]
     pub crop: Crop,
     pub transform: Option<PreprocessConfig>,
@@ -129,7 +129,7 @@ pub struct EyeConfig {
 pub struct FaceConfig {
     pub camera: String,
     pub model: Option<PathBuf>,
-    pub filter: Option<FilterParameters>,
+    pub filter: Option<FaceFilterParameters>,
     #[serde(default)]
     pub crop: Crop,
     pub transform: Option<PreprocessConfig>,

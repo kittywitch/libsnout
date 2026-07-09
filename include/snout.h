@@ -178,7 +178,7 @@ typedef struct Config Config;
 
 typedef struct EtvrEmitter EtvrEmitter;
 
-typedef struct EyeCalibrator EyeCalibrator;
+typedef struct EyeFusion EyeFusion;
 
 typedef struct EyePipeline EyePipeline;
 
@@ -247,12 +247,6 @@ typedef struct Crop {
   float scale;
 } Crop;
 
-typedef struct FilterParameters {
-  bool enable;
-  float min_cutoff;
-  float beta;
-} FilterParameters;
-
 typedef struct Bounds {
   float min;
   float max;
@@ -308,7 +302,7 @@ typedef struct SnoutEyeTrackerFields {
   struct FramePreprocessor *left_preprocessor;
   struct FramePreprocessor *right_preprocessor;
   struct EyePipeline *pipeline;
-  struct EyeCalibrator *calibrator;
+  struct EyeFusion *calibrator;
 } SnoutEyeTrackerFields;
 
 typedef struct SnoutOutputFields {
@@ -538,19 +532,6 @@ struct FacePipeline *snout_face_pipeline_new(void);
 bool snout_face_pipeline_set_model(struct FacePipeline *pipeline, const char *path);
 
 /**
- * Get the current filter parameters of the face pipeline.
- *
- * Returns a copy of the current filter parameters.
- */
-struct FilterParameters snout_face_pipeline_filter(const struct FacePipeline *pipeline);
-
-/**
- * Set the filter parameters of the face pipeline.
- */
-void snout_face_pipeline_set_filter(struct FacePipeline *pipeline,
-                                    struct FilterParameters parameters);
-
-/**
  * Run the face pipeline on a frame.
  *
  * Returns a pointer to a `Weights<FaceShape>`, or null if the pipeline
@@ -584,19 +565,6 @@ struct EyePipeline *snout_eye_pipeline_new(void);
  * If path is null, the model will be unloaded.
  */
 bool snout_eye_pipeline_set_model(struct EyePipeline *pipeline, const char *path);
-
-/**
- * Get the current filter parameters of the eye pipeline.
- *
- * Returns a copy of the current filter parameters.
- */
-struct FilterParameters snout_eye_pipeline_filter(const struct EyePipeline *pipeline);
-
-/**
- * Set the filter parameters of the eye pipeline.
- */
-void snout_eye_pipeline_set_filter(struct EyePipeline *pipeline,
-                                   struct FilterParameters parameters);
 
 /**
  * Run the eye pipeline on a pair of stereo frames.
@@ -657,29 +625,19 @@ void snout_face_calibrator_free(struct ManualFaceCalibrator *calibrator);
 /**
  * Create a new eye calibrator.
  */
-struct EyeCalibrator *snout_eye_calibrator_new(void);
+struct EyeFusion *snout_eye_calibrator_new(void);
 
 /**
  * Get the calibration bounds for an eye shape.
  */
-struct Bounds snout_eye_calibrator_bounds(const struct EyeCalibrator *calibrator, EyeShape shape);
+struct Bounds snout_eye_calibrator_bounds(const struct EyeFusion *calibrator, EyeShape shape);
 
 /**
  * Set the calibration bounds for an eye shape.
  */
-void snout_eye_calibrator_set_bounds(struct EyeCalibrator *calibrator,
+void snout_eye_calibrator_set_bounds(struct EyeFusion *calibrator,
                                      EyeShape shape,
                                      struct Bounds bounds);
-
-/**
- * Get whether the eye calibrator links the eyes.
- */
-bool snout_eye_calibrator_link_eyes(const struct EyeCalibrator *calibrator);
-
-/**
- * Set whether the eye calibrator links the eyes.
- */
-void snout_eye_calibrator_set_link_eyes(struct EyeCalibrator *calibrator, bool link_eyes);
 
 /**
  * Calibrate raw eye weights.
@@ -689,7 +647,7 @@ void snout_eye_calibrator_set_link_eyes(struct EyeCalibrator *calibrator, bool l
  * The returned pointer is valid until the next call to [`snout_eye_calibrator_calibrate`]
  * or [`snout_eye_calibrator_free`].
  */
-const struct Weights_EyeShape *snout_eye_calibrator_calibrate(struct EyeCalibrator *calibrator,
+const struct Weights_EyeShape *snout_eye_calibrator_calibrate(struct EyeFusion *calibrator,
                                                               const struct Weights_EyeShape *weights);
 
 /**
@@ -697,7 +655,7 @@ const struct Weights_EyeShape *snout_eye_calibrator_calibrate(struct EyeCalibrat
  *
  * Does nothing if the pointer is null.
  */
-void snout_eye_calibrator_free(struct EyeCalibrator *calibrator);
+void snout_eye_calibrator_free(struct EyeFusion *calibrator);
 
 /**
  * Creates a new [`FaceTracker`].

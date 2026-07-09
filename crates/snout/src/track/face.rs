@@ -7,6 +7,7 @@ use crate::{
         sensor::SensorConfig,
     },
     config::Config,
+    filter::FaceFilter,
     pipeline::FacePipeline,
     track::TrackerError,
     weights::Weights,
@@ -21,6 +22,7 @@ pub struct FaceReport<'a> {
 pub struct FaceTracker {
     pub preprocessor: FramePreprocessor,
     pub pipeline: FacePipeline,
+    pub filter: FaceFilter,
     pub calibrator: ManualFaceCalibrator,
 
     camera: Option<MonoCamera>,
@@ -33,6 +35,7 @@ impl FaceTracker {
         Self {
             preprocessor: FramePreprocessor::new(),
             pipeline: FacePipeline::new(),
+            filter: FaceFilter::new(),
             calibrator: ManualFaceCalibrator::new(),
 
             camera: None,
@@ -47,7 +50,7 @@ impl FaceTracker {
         tracker.pipeline.set_model(config.face.model.as_ref())?;
 
         if let Some(filter) = config.face.filter {
-            tracker.pipeline.set_filter(filter);
+            tracker.filter.set_parameters(filter);
         }
 
         let camera = resolve_source(cameras, &config.face.camera);
@@ -109,7 +112,8 @@ impl FaceTracker {
             return Ok(None);
         };
 
-        let weights = self.calibrator.calibrate(raw_weights);
+        let filtered = self.filter.filter(raw_weights);
+        let weights = self.calibrator.calibrate(filtered);
 
         Ok(Some(FaceReport {
             raw_frame,

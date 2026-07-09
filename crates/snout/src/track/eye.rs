@@ -1,11 +1,12 @@
 use crate::{
-    calibration::{EyeCalibrator, EyeShape},
+    calibration::{EyeFusion, EyeShape},
     capture::{
         CameraError, Frame, StereoCamera,
         discovery::{CameraInfo, CameraSource, resolve_source},
         processing::FramePreprocessor,
     },
     config::Config,
+    filter::EyeFilter,
     pipeline::EyePipeline,
     track::TrackerError,
     weights::Weights,
@@ -23,7 +24,8 @@ pub struct EyeTracker {
     pub left_preprocessor: FramePreprocessor,
     pub right_preprocessor: FramePreprocessor,
     pub pipeline: EyePipeline,
-    pub calibrator: EyeCalibrator,
+    pub calibrator: EyeFusion,
+    pub filter: EyeFilter,
 
     camera: Option<StereoCamera>,
     left_source: Option<CameraSource>,
@@ -36,7 +38,8 @@ impl EyeTracker {
             left_preprocessor: FramePreprocessor::new(),
             right_preprocessor: FramePreprocessor::new(),
             pipeline: EyePipeline::new(),
-            calibrator: EyeCalibrator::new(),
+            calibrator: EyeFusion::new(),
+            filter: EyeFilter::new(),
 
             camera: None,
             left_source: None,
@@ -54,12 +57,16 @@ impl EyeTracker {
 
         tracker.set_source(left_camera, right_camera);
 
-        tracker
-            .calibrator
-            .set_link_eyes(config.eye.link.unwrap_or(true));
-
         if let Some(filter) = config.eye.filter {
-            tracker.pipeline.set_filter(filter);
+            tracker.filter.set_parameters(filter);
+        }
+
+        if let Some(center) = config.eye.left.center {
+            tracker.calibrator.set_left_center(center);
+        }
+
+        if let Some(center) = config.eye.right.center {
+            tracker.calibrator.set_right_center(center);
         }
 
         // Left preprocessor
@@ -120,7 +127,8 @@ impl EyeTracker {
             return Ok(None);
         };
 
-        let weights = self.calibrator.calibrate(raw_weights);
+        let fused = self.calibrator.calibrate(raw_weights);
+        let weights = self.filter.filter(fused);
 
         Ok(Some(EyeReport {
             left_raw_frame,

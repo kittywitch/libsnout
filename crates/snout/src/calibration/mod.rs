@@ -1,7 +1,7 @@
 mod eye;
 mod face;
 
-pub use eye::{EyeCalibrator, EyeShape};
+pub use eye::{EyeCenter, EyeFusion, EyeShape};
 pub use face::{FaceShape, ManualFaceCalibrator};
 
 #[derive(Copy, Clone, Debug, PartialEq)]

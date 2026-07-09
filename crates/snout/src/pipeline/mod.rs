@@ -5,7 +5,6 @@ mod internal;
 
 use std::path::Path;
 
-use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 pub use eye::EyePipeline;
@@ -17,14 +16,6 @@ pub enum PipelineError {
     Load(String),
     #[error("Inference failed: {0}")]
     Inference(String),
-}
-
-#[derive(Copy, Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
-#[repr(C)]
-pub struct FilterParameters {
-    pub enable: bool,
-    pub min_cutoff: f32,
-    pub beta: f32,
 }
 
 /// Initialize the ONNX runtime with a specific path.

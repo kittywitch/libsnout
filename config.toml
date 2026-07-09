@@ -6,16 +6,22 @@
 #interval = 10 # In milliseconds
 
 [eye]
-#link = true
 model = "eyeModel.onnx" # If not specified, tracking will be disabled.
 
+# Temporal smoothing for the (fused) eye output.
+# Omit the whole table to use the defaults shown below.
+# Each channel group is a One-Euro filter tuned separately.
 #[eye.filter]
 #enable = true
-#min_cutoff = 0.5
-#beta = 3.0
+#coast_openness = 0.1                              # hold gaze while both eyes are shut (blink)
+#version = { min_cutoff = 0.5, beta = 3.0 }        # shared gaze direction (both eyes together)
+#vergence = { min_cutoff = 0.3, beta = 0.5 }       # eye crossing
+#lid = { min_cutoff = 2.0, beta = 5.0 }            # eyelids
+#expression = { min_cutoff = 0.8, beta = 2.0 }     # widen / brow / squint
 
 [eye.left]
 camera = "Bigeye: Bigeye (800x400 @ 90fps)" # If not specified, tracking will be disabled.
+#center = { yaw = 0.5, pitch = 0.5 } # Neutral gaze in raw [0,1] space.
 
 #[eye.left.crop]
 #scale = 1.0
@@ -30,6 +36,7 @@ camera = "Bigeye: Bigeye (800x400 @ 90fps)" # If not specified, tracking will be
 
 [eye.right]
 camera = "Bigeye: Bigeye (800x400 @ 90fps)" # If not specified, tracking will be disabled.
+#center = { yaw = 0.5, pitch = 0.5 } # Neutral gaze in raw [0,1] space.
 
 #[eye.right.crop]
 #scale = 1.0

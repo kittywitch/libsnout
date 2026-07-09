@@ -6,7 +6,7 @@ use std::path::Path;
 use std::sync::Mutex;
 use std::{cell::RefCell, os::raw::c_char};
 
-use crate::calibration::{Bounds, EyeCalibrator, EyeShape, FaceShape, ManualFaceCalibrator};
+use crate::calibration::{Bounds, EyeFusion, EyeShape, FaceShape, ManualFaceCalibrator};
 use crate::capture::processing::Crop;
 use crate::capture::{
     CameraError, MonoCamera,
@@ -16,7 +16,7 @@ use crate::capture::{
 use crate::capture::{Frame, StereoCamera};
 use crate::config::{Config, ConfigError};
 use crate::output::{BabbleEmitter, EtvrEmitter, OscTransport, TransportError};
-use crate::pipeline::{EyePipeline, FacePipeline, FilterParameters, PipelineError};
+use crate::pipeline::{EyePipeline, FacePipeline, PipelineError};
 use crate::track::eye::EyeTracker;
 use crate::track::face::FaceTracker;
 use crate::track::output::Output;
@@ -731,41 +731,6 @@ pub extern "C" fn snout_face_pipeline_set_model(
     }
 }
 
-/// Get the current filter parameters of the face pipeline.
-///
-/// Returns a copy of the current filter parameters.
-#[unsafe(no_mangle)]
-pub extern "C" fn snout_face_pipeline_filter(pipeline: *const FacePipeline) -> FilterParameters {
-    clear_last_error();
-
-    if pipeline.is_null() {
-        set_null_pointer_error();
-        return FilterParameters::default();
-    }
-
-    let pipeline = unsafe { &*pipeline };
-
-    pipeline.filter()
-}
-
-/// Set the filter parameters of the face pipeline.
-#[unsafe(no_mangle)]
-pub extern "C" fn snout_face_pipeline_set_filter(
-    pipeline: *mut FacePipeline,
-    parameters: FilterParameters,
-) {
-    clear_last_error();
-
-    if pipeline.is_null() {
-        set_null_pointer_error();
-        return;
-    }
-
-    let pipeline = unsafe { &mut *pipeline };
-
-    pipeline.set_filter(parameters);
-}
-
 /// Run the face pipeline on a frame.
 ///
 /// Returns a pointer to a `Weights<FaceShape>`, or null if the pipeline
@@ -869,41 +834,6 @@ pub extern "C" fn snout_eye_pipeline_set_model(
             false
         }
     }
-}
-
-/// Get the current filter parameters of the eye pipeline.
-///
-/// Returns a copy of the current filter parameters.
-#[unsafe(no_mangle)]
-pub extern "C" fn snout_eye_pipeline_filter(pipeline: *const EyePipeline) -> FilterParameters {
-    clear_last_error();
-
-    if pipeline.is_null() {
-        set_null_pointer_error();
-        return FilterParameters::default();
-    }
-
-    let pipeline = unsafe { &*pipeline };
-
-    pipeline.filter()
-}
-
-/// Set the filter parameters of the eye pipeline.
-#[unsafe(no_mangle)]
-pub extern "C" fn snout_eye_pipeline_set_filter(
-    pipeline: *mut EyePipeline,
-    parameters: FilterParameters,
-) {
-    clear_last_error();
-
-    if pipeline.is_null() {
-        set_null_pointer_error();
-        return;
-    }
-
-    let pipeline = unsafe { &mut *pipeline };
-
-    pipeline.set_filter(parameters);
 }
 
 /// Run the eye pipeline on a pair of stereo frames.
@@ -1042,16 +972,16 @@ pub extern "C" fn snout_face_calibrator_free(calibrator: *mut ManualFaceCalibrat
 
 /// Create a new eye calibrator.
 #[unsafe(no_mangle)]
-pub extern "C" fn snout_eye_calibrator_new() -> *mut EyeCalibrator {
+pub extern "C" fn snout_eye_calibrator_new() -> *mut EyeFusion {
     clear_last_error();
 
-    Box::into_raw(Box::new(EyeCalibrator::new()))
+    Box::into_raw(Box::new(EyeFusion::new()))
 }
 
 /// Get the calibration bounds for an eye shape.
 #[unsafe(no_mangle)]
 pub extern "C" fn snout_eye_calibrator_bounds(
-    calibrator: *const EyeCalibrator,
+    calibrator: *const EyeFusion,
     shape: EyeShape,
 ) -> Bounds {
     clear_last_error();
@@ -1069,7 +999,7 @@ pub extern "C" fn snout_eye_calibrator_bounds(
 /// Set the calibration bounds for an eye shape.
 #[unsafe(no_mangle)]
 pub extern "C" fn snout_eye_calibrator_set_bounds(
-    calibrator: *mut EyeCalibrator,
+    calibrator: *mut EyeFusion,
     shape: EyeShape,
     bounds: Bounds,
 ) {
@@ -1085,39 +1015,6 @@ pub extern "C" fn snout_eye_calibrator_set_bounds(
     calibrator.set_bounds(shape, bounds);
 }
 
-/// Get whether the eye calibrator links the eyes.
-#[unsafe(no_mangle)]
-pub extern "C" fn snout_eye_calibrator_link_eyes(calibrator: *const EyeCalibrator) -> bool {
-    clear_last_error();
-
-    if calibrator.is_null() {
-        set_null_pointer_error();
-        return false;
-    }
-
-    let calibrator = unsafe { &*calibrator };
-
-    calibrator.link_eyes()
-}
-
-/// Set whether the eye calibrator links the eyes.
-#[unsafe(no_mangle)]
-pub extern "C" fn snout_eye_calibrator_set_link_eyes(
-    calibrator: *mut EyeCalibrator,
-    link_eyes: bool,
-) {
-    clear_last_error();
-
-    if calibrator.is_null() {
-        set_null_pointer_error();
-        return;
-    }
-
-    let calibrator = unsafe { &mut *calibrator };
-
-    calibrator.set_link_eyes(link_eyes);
-}
-
 /// Calibrate raw eye weights.
 ///
 /// Returns a pointer to calibrated `Weights<EyeShape>`, or null if an error occurred.
@@ -1126,7 +1023,7 @@ pub extern "C" fn snout_eye_calibrator_set_link_eyes(
 /// or [`snout_eye_calibrator_free`].
 #[unsafe(no_mangle)]
 pub extern "C" fn snout_eye_calibrator_calibrate(
-    calibrator: *mut EyeCalibrator,
+    calibrator: *mut EyeFusion,
     weights: *const Weights<EyeShape>,
 ) -> *const Weights<EyeShape> {
     clear_last_error();
@@ -1146,7 +1043,7 @@ pub extern "C" fn snout_eye_calibrator_calibrate(
 ///
 /// Does nothing if the pointer is null.
 #[unsafe(no_mangle)]
-pub extern "C" fn snout_eye_calibrator_free(calibrator: *mut EyeCalibrator) {
+pub extern "C" fn snout_eye_calibrator_free(calibrator: *mut EyeFusion) {
     clear_last_error();
 
     if calibrator.is_null() {
@@ -1511,7 +1408,7 @@ pub struct SnoutEyeTrackerFields {
     pub left_preprocessor: *mut FramePreprocessor,
     pub right_preprocessor: *mut FramePreprocessor,
     pub pipeline: *mut EyePipeline,
-    pub calibrator: *mut EyeCalibrator,
+    pub calibrator: *mut EyeFusion,
 }
 
 impl SnoutEyeTrackerFields {
