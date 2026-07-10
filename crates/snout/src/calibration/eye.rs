@@ -122,7 +122,8 @@ impl EyeShape {
 
 /// The neutral gaze position ("straight ahead") for one eye, in the model's raw
 /// [0,1] output space. The default 0.5 trusts the model's own center as-is.
-#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[repr(C)]
 pub struct EyeCenter {
     pub yaw: f32,
     pub pitch: f32,

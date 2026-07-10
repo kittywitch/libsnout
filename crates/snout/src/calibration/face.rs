@@ -368,7 +368,7 @@ impl ManualFaceCalibrator {
         self.bounds.set_lower(shape, lower);
     }
 
-    pub fn start_calibration(&mut self, frames: usize) {
+    pub fn start_lower_calibration(&mut self, frames: usize) {
         self.neutral_hold.start(frames);
     }
 

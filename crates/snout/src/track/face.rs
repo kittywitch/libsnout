@@ -99,7 +99,9 @@ impl FaceTracker {
 
     pub fn handle_event(&mut self, event: FaceEvent) {
         match event {
-            FaceEvent::CalibrateLower { frames } => self.calibrator.start_calibration(frames as _),
+            FaceEvent::CalibrateLower { frames } => {
+                self.calibrator.start_lower_calibration(frames as _)
+            }
             FaceEvent::CalibrateUpper { shape, frames } => {
                 self.calibrator.start_upper_calibration(shape, frames as _)
             }
