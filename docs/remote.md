@@ -51,7 +51,7 @@ This will take a 100 frames worth of data (about 3 seconds at 30fps) and use it 
 Make sure to keep a neutral face through the calibration cycle.
 
 ```sh
-snout-remote face-calibrate
+snout-remote face-calibrate-lower [--frames <n>]
 ```
 
 ### Face calibrate upper bound
@@ -81,7 +81,7 @@ Set the bounds of a face shape.
 Start the auto calibration process for the face.
 
 ```osc
-/snout/face/calibrate
+/snout/face/calibrate/lower <frames>
 ```
 
 #### Start face upper calibration
@@ -90,6 +90,22 @@ Start the upper calibration process for the face.
 
 ```osc
 /snout/face/calibrate/upper <shape> <frames>
+```
+
+#### Capture frame
+
+Capture the next processed face frame to an image file.
+The path must be absolute.
+
+```osc
+/snout/face/capture <path>
+```
+
+Capture the next processed eye frame to an image file. side can be `left` or `right`.
+The path must be absolute.
+
+```osc
+/snout/eye/capture <side> <path>
 ```
 
 ## Available face shapes

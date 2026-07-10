@@ -6,6 +6,65 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+enum FaceShape
+#if defined(__cplusplus) || __STDC_VERSION__ >= 202311L
+  : uint8_t
+#endif // defined(__cplusplus) || __STDC_VERSION__ >= 202311L
+ {
+  FaceShape_CheekPuffLeft,
+  FaceShape_CheekPuffRight,
+  FaceShape_CheekSuckLeft,
+  FaceShape_CheekSuckRight,
+  FaceShape_JawOpen,
+  FaceShape_JawForward,
+  FaceShape_JawLeft,
+  FaceShape_JawRight,
+  FaceShape_NoseSneerLeft,
+  FaceShape_NoseSneerRight,
+  FaceShape_MouthFunnel,
+  FaceShape_MouthPucker,
+  FaceShape_MouthLeft,
+  FaceShape_MouthRight,
+  FaceShape_MouthRollUpper,
+  FaceShape_MouthRollLower,
+  FaceShape_MouthShrugUpper,
+  FaceShape_MouthShrugLower,
+  FaceShape_MouthClose,
+  FaceShape_MouthSmileLeft,
+  FaceShape_MouthSmileRight,
+  FaceShape_MouthFrownLeft,
+  FaceShape_MouthFrownRight,
+  FaceShape_MouthDimpleLeft,
+  FaceShape_MouthDimpleRight,
+  FaceShape_MouthUpperUpLeft,
+  FaceShape_MouthUpperUpRight,
+  FaceShape_MouthLowerDownLeft,
+  FaceShape_MouthLowerDownRight,
+  FaceShape_MouthPressLeft,
+  FaceShape_MouthPressRight,
+  FaceShape_MouthStretchLeft,
+  FaceShape_MouthStretchRight,
+  FaceShape_TongueOut,
+  FaceShape_TongueUp,
+  FaceShape_TongueDown,
+  FaceShape_TongueLeft,
+  FaceShape_TongueRight,
+  FaceShape_TongueRoll,
+  FaceShape_TongueBendDown,
+  FaceShape_TongueCurlUp,
+  FaceShape_TongueSquish,
+  FaceShape_TongueFlat,
+  FaceShape_TongueTwistLeft,
+  FaceShape_TongueTwistRight,
+};
+#ifndef __cplusplus
+#if __STDC_VERSION__ >= 202311L
+typedef enum FaceShape FaceShape;
+#else
+typedef uint8_t FaceShape;
+#endif // __STDC_VERSION__ >= 202311L
+#endif // __cplusplus
+
 /**
  * Represents an error that occurred during a Snout operation.
  */
@@ -81,65 +140,6 @@ typedef enum SnoutError {
    */
   SnoutError_ConfigInvalidConfig,
 } SnoutError;
-
-enum FaceShape
-#if defined(__cplusplus) || __STDC_VERSION__ >= 202311L
-  : uint8_t
-#endif // defined(__cplusplus) || __STDC_VERSION__ >= 202311L
- {
-  FaceShape_CheekPuffLeft,
-  FaceShape_CheekPuffRight,
-  FaceShape_CheekSuckLeft,
-  FaceShape_CheekSuckRight,
-  FaceShape_JawOpen,
-  FaceShape_JawForward,
-  FaceShape_JawLeft,
-  FaceShape_JawRight,
-  FaceShape_NoseSneerLeft,
-  FaceShape_NoseSneerRight,
-  FaceShape_MouthFunnel,
-  FaceShape_MouthPucker,
-  FaceShape_MouthLeft,
-  FaceShape_MouthRight,
-  FaceShape_MouthRollUpper,
-  FaceShape_MouthRollLower,
-  FaceShape_MouthShrugUpper,
-  FaceShape_MouthShrugLower,
-  FaceShape_MouthClose,
-  FaceShape_MouthSmileLeft,
-  FaceShape_MouthSmileRight,
-  FaceShape_MouthFrownLeft,
-  FaceShape_MouthFrownRight,
-  FaceShape_MouthDimpleLeft,
-  FaceShape_MouthDimpleRight,
-  FaceShape_MouthUpperUpLeft,
-  FaceShape_MouthUpperUpRight,
-  FaceShape_MouthLowerDownLeft,
-  FaceShape_MouthLowerDownRight,
-  FaceShape_MouthPressLeft,
-  FaceShape_MouthPressRight,
-  FaceShape_MouthStretchLeft,
-  FaceShape_MouthStretchRight,
-  FaceShape_TongueOut,
-  FaceShape_TongueUp,
-  FaceShape_TongueDown,
-  FaceShape_TongueLeft,
-  FaceShape_TongueRight,
-  FaceShape_TongueRoll,
-  FaceShape_TongueBendDown,
-  FaceShape_TongueCurlUp,
-  FaceShape_TongueSquish,
-  FaceShape_TongueFlat,
-  FaceShape_TongueTwistLeft,
-  FaceShape_TongueTwistRight,
-};
-#ifndef __cplusplus
-#if __STDC_VERSION__ >= 202311L
-typedef enum FaceShape FaceShape;
-#else
-typedef uint8_t FaceShape;
-#endif // __STDC_VERSION__ >= 202311L
-#endif // __cplusplus
 
 enum EyeShape
 #if defined(__cplusplus) || __STDC_VERSION__ >= 202311L
@@ -217,6 +217,44 @@ typedef struct StereoCamera StereoCamera;
 typedef struct Weights_EyeShape Weights_EyeShape;
 
 typedef struct Weights_FaceShape Weights_FaceShape;
+
+/**
+ * A decoded control command.
+ */
+typedef enum ControlEvent_Tag {
+  /**
+   * Set the input calibration range (`lower`, `upper`) for a face shape.
+   */
+  ControlEvent_FaceBounds,
+  /**
+   * Begin a neutral-hold face calibration pass.
+   */
+  ControlEvent_FaceCalibrate,
+  /**
+   * Begin an upper-bound calibration pass for a single shape, capturing the
+   * peak over the given number of frames.
+   */
+  ControlEvent_FaceCalibrateUpper,
+} ControlEvent_Tag;
+
+typedef struct ControlEvent_FaceBounds_Body {
+  FaceShape _0;
+  float _1;
+  float _2;
+} ControlEvent_FaceBounds_Body;
+
+typedef struct ControlEvent_FaceCalibrateUpper_Body {
+  FaceShape _0;
+  uint32_t _1;
+} ControlEvent_FaceCalibrateUpper_Body;
+
+typedef struct ControlEvent {
+  ControlEvent_Tag tag;
+  union {
+    ControlEvent_FaceBounds_Body face_bounds;
+    ControlEvent_FaceCalibrateUpper_Body face_calibrate_upper;
+  };
+} ControlEvent;
 
 /**
  * Represents a pair of stereo camera frames.
@@ -332,6 +370,8 @@ extern const uintptr_t SNOUT_FACE_SHAPE_COUNT;
  * The number of eye shapes.
  */
 extern const uintptr_t SNOUT_EYE_SHAPE_COUNT;
+
+struct ControlEvent test_control(void);
 
 /**
  * Get the last error that occurred.

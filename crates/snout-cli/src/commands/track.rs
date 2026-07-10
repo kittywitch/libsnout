@@ -7,23 +7,16 @@ use std::{
 
 use indicatif::MultiProgress;
 use snout::{
-    calibration::{EyeShape, FaceShape},
+    calibration::EyeShape,
     capture::discovery::{CameraInfo, query_cameras},
     config::Config,
-    control::{ControlEvent, OscControl},
+    control::{ControlEvent, EyeEvent, FaceEvent, OscControl},
     track::{eye::EyeTracker, face::FaceTracker, initialize_runtime, output::Output},
 };
 
 use crate::status::{Float, Heartbeat, Pair, Rate, StatusBar, Vector};
 
 const IDLE_RETRY: Duration = Duration::from_millis(10);
-
-/// A control command routed to the face worker.
-enum FaceEvent {
-    Bounds(FaceShape, f32, f32),
-    Calibrate,
-    CalibrateUpper(FaceShape, u32),
-}
 
 pub struct TrackCommand {
     config: Config,
@@ -41,16 +34,17 @@ impl TrackCommand {
         let cameras = query_cameras();
         let cameras = &cameras;
 
-        let (face_tx, face_rx) = mpsc::channel::<FaceEvent>();
+        let (face_tx, face_rx) = mpsc::channel();
+        let (eye_tx, eye_rx) = mpsc::channel();
 
         thread::scope(|scope| {
             if let Some(control) = &self.config.control {
                 let listen = control.listen.clone();
-                scope.spawn(move || run_control(listen, face_tx));
+                scope.spawn(move || run_control(listen, face_tx, eye_tx));
             }
 
             scope.spawn(move || self.run_face(cameras, multi, face_rx));
-            scope.spawn(move || self.run_eye(cameras, multi));
+            scope.spawn(move || self.run_eye(cameras, multi, eye_rx));
         });
     }
 
@@ -70,20 +64,7 @@ impl TrackCommand {
 
         loop {
             while let Ok(event) = control.try_recv() {
-                match event {
-                    FaceEvent::Bounds(shape, lower, upper) => {
-                        tracker.calibrator.set_lower(shape, lower);
-                        tracker.calibrator.set_upper(shape, upper);
-                    }
-                    FaceEvent::Calibrate => {
-                        tracker.calibrator.start_calibration();
-                    }
-                    FaceEvent::CalibrateUpper(shape, frames) => {
-                        tracker
-                            .calibrator
-                            .start_upper_calibration(shape, frames as usize);
-                    }
-                }
+                tracker.handle_event(event);
             }
 
             match tracker.track().unwrap() {
@@ -102,7 +83,7 @@ impl TrackCommand {
     }
 
     /// Eye tracking worker: owns its tracker, output, and status line.
-    fn run_eye(&self, cameras: &[CameraInfo], multi: &MultiProgress) {
+    fn run_eye(&self, cameras: &[CameraInfo], multi: &MultiProgress, control: Receiver<EyeEvent>) {
         let mut tracker = EyeTracker::with_config(cameras, &self.config).unwrap();
         let mut output = Output::with_config(&self.config).unwrap();
 
@@ -121,6 +102,10 @@ impl TrackCommand {
         });
 
         loop {
+            while let Ok(event) = control.try_recv() {
+                tracker.handle_event(event);
+            }
+
             match tracker.track().unwrap() {
                 Some(report) => {
                     heartbeat.beat();
@@ -177,7 +162,7 @@ impl TrackCommand {
     }
 }
 
-fn run_control(listen: String, face: Sender<FaceEvent>) {
+fn run_control(listen: String, face: Sender<FaceEvent>, eye: Sender<EyeEvent>) {
     let mut control = match OscControl::bind(&listen) {
         Ok(control) => {
             tracing::info!(listen = %listen, "control listener started");
@@ -189,25 +174,24 @@ fn run_control(listen: String, face: Sender<FaceEvent>) {
         }
     };
 
-    loop {
-        let event = match control.receive() {
-            Ok(event) => event,
-            Err(error) => {
-                tracing::error!(%error, "control listener stopped");
-                break;
-            }
-        };
+    let mut running = true;
 
-        let face_event = match event {
-            ControlEvent::FaceBounds(shape, lower, upper) => FaceEvent::Bounds(shape, lower, upper),
-            ControlEvent::FaceCalibrate => FaceEvent::Calibrate,
-            ControlEvent::FaceCalibrateUpper(shape, frames) => {
-                FaceEvent::CalibrateUpper(shape, frames)
+    while running {
+        let result = control.receive(|event| match event {
+            ControlEvent::Face { event } => {
+                if face.send(event).is_err() {
+                    running = false;
+                }
             }
-        };
+            ControlEvent::Eye { event } => {
+                if eye.send(event).is_err() {
+                    running = false;
+                }
+            }
+        });
 
-        if face.send(face_event).is_err() {
-            // Face worker has stopped; nothing left to control.
+        if let Err(error) = result {
+            tracing::error!(%error, "control listener stopped");
             break;
         }
     }

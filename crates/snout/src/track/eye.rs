@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use crate::{
     calibration::{EyeFusion, EyeShape},
     capture::{
@@ -6,6 +8,7 @@ use crate::{
         processing::FramePreprocessor,
     },
     config::Config,
+    control::{EyeEvent, Side},
     filter::EyeFilter,
     pipeline::EyePipeline,
     track::TrackerError,
@@ -30,6 +33,9 @@ pub struct EyeTracker {
     camera: Option<StereoCamera>,
     left_source: Option<CameraSource>,
     right_source: Option<CameraSource>,
+
+    left_capture: Option<PathBuf>,
+    right_capture: Option<PathBuf>,
 }
 
 impl EyeTracker {
@@ -44,6 +50,9 @@ impl EyeTracker {
             camera: None,
             left_source: None,
             right_source: None,
+
+            left_capture: None,
+            right_capture: None,
         }
     }
 
@@ -107,6 +116,15 @@ impl EyeTracker {
         self.right_source = right;
     }
 
+    pub fn handle_event(&mut self, event: EyeEvent) {
+        match event {
+            EyeEvent::Capture { side, path } => match side {
+                Side::Left => self.left_capture = Some(path),
+                Side::Right => self.right_capture = Some(path),
+            },
+        }
+    }
+
     pub fn track(&mut self) -> Result<Option<EyeReport<'_>>, TrackerError> {
         if !self.ensure_camera()? {
             return Ok(None);
@@ -125,6 +143,18 @@ impl EyeTracker {
 
         let left_processed_frame = self.left_preprocessor.process(left_raw_frame)?;
         let right_processed_frame = self.right_preprocessor.process(right_raw_frame)?;
+
+        if let Some(capture) = self.left_capture.take() {
+            if let Err(error) = left_processed_frame.image.save(&capture) {
+                tracing::warn!(?error, "failed to save left eye capture");
+            }
+        }
+
+        if let Some(capture) = self.right_capture.take() {
+            if let Err(error) = right_processed_frame.image.save(&capture) {
+                tracing::warn!(?error, "failed to save right eye capture");
+            }
+        }
 
         let Ok(Some(raw_weights)) = self
             .pipeline

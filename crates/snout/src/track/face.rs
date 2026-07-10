@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use crate::{
     calibration::{FaceShape, ManualFaceCalibrator},
     capture::{
@@ -7,6 +9,7 @@ use crate::{
         sensor::SensorConfig,
     },
     config::Config,
+    control::FaceEvent,
     filter::FaceFilter,
     pipeline::FacePipeline,
     track::TrackerError,
@@ -28,6 +31,8 @@ pub struct FaceTracker {
     camera: Option<MonoCamera>,
     source: Option<CameraSource>,
     sensor_config: Option<SensorConfig>,
+
+    capture: Option<PathBuf>,
 }
 
 impl FaceTracker {
@@ -41,6 +46,8 @@ impl FaceTracker {
             camera: None,
             source: None,
             sensor_config: None,
+
+            capture: None,
         }
     }
 
@@ -90,6 +97,24 @@ impl FaceTracker {
         self.source = source;
     }
 
+    pub fn handle_event(&mut self, event: FaceEvent) {
+        match event {
+            FaceEvent::CalibrateLower { frames } => self.calibrator.start_calibration(frames as _),
+            FaceEvent::CalibrateUpper { shape, frames } => {
+                self.calibrator.start_upper_calibration(shape, frames as _)
+            }
+            FaceEvent::SetBounds {
+                shape,
+                lower,
+                upper,
+            } => {
+                self.calibrator.set_lower(shape, lower);
+                self.calibrator.set_upper(shape, upper);
+            }
+            FaceEvent::Capture { path } => self.capture = Some(path),
+        }
+    }
+
     pub fn track(&mut self) -> Result<Option<FaceReport<'_>>, TrackerError> {
         if !self.ensure_camera()? {
             return Ok(None);
@@ -107,6 +132,12 @@ impl FaceTracker {
         };
 
         let processed_frame = self.preprocessor.process(raw_frame)?;
+
+        if let Some(capture) = &self.capture.take() {
+            if let Err(error) = processed_frame.image.save(capture) {
+                tracing::warn!(?error, "failed to save capture");
+            }
+        }
 
         let Some(raw_weights) = self.pipeline.run(processed_frame)? else {
             return Ok(None);

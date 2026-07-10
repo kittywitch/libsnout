@@ -252,9 +252,6 @@ impl FaceBounds {
     }
 }
 
-/// At ~30 fps this is roughly three seconds of neutral hold.
-const CALIBRATION_SAMPLES: usize = 100;
-
 struct NeutralHold {
     remaining: usize,
     sums: Vec<f32>,
@@ -371,8 +368,8 @@ impl ManualFaceCalibrator {
         self.bounds.set_lower(shape, lower);
     }
 
-    pub fn start_calibration(&mut self) {
-        self.neutral_hold.start(CALIBRATION_SAMPLES);
+    pub fn start_calibration(&mut self, frames: usize) {
+        self.neutral_hold.start(frames);
     }
 
     pub fn start_upper_calibration(&mut self, shape: FaceShape, frames: usize) {
