@@ -2,6 +2,7 @@
 language = "c"
 include_guard = "snout_h"
 cpp_compat = true
+namespace = "snout"
 
 [enum]
 prefix_with_name = true

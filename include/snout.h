@@ -6,64 +6,9 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-enum FaceShape
-#if defined(__cplusplus) || __STDC_VERSION__ >= 202311L
-  : uint8_t
-#endif // defined(__cplusplus) || __STDC_VERSION__ >= 202311L
- {
-  FaceShape_CheekPuffLeft,
-  FaceShape_CheekPuffRight,
-  FaceShape_CheekSuckLeft,
-  FaceShape_CheekSuckRight,
-  FaceShape_JawOpen,
-  FaceShape_JawForward,
-  FaceShape_JawLeft,
-  FaceShape_JawRight,
-  FaceShape_NoseSneerLeft,
-  FaceShape_NoseSneerRight,
-  FaceShape_MouthFunnel,
-  FaceShape_MouthPucker,
-  FaceShape_MouthLeft,
-  FaceShape_MouthRight,
-  FaceShape_MouthRollUpper,
-  FaceShape_MouthRollLower,
-  FaceShape_MouthShrugUpper,
-  FaceShape_MouthShrugLower,
-  FaceShape_MouthClose,
-  FaceShape_MouthSmileLeft,
-  FaceShape_MouthSmileRight,
-  FaceShape_MouthFrownLeft,
-  FaceShape_MouthFrownRight,
-  FaceShape_MouthDimpleLeft,
-  FaceShape_MouthDimpleRight,
-  FaceShape_MouthUpperUpLeft,
-  FaceShape_MouthUpperUpRight,
-  FaceShape_MouthLowerDownLeft,
-  FaceShape_MouthLowerDownRight,
-  FaceShape_MouthPressLeft,
-  FaceShape_MouthPressRight,
-  FaceShape_MouthStretchLeft,
-  FaceShape_MouthStretchRight,
-  FaceShape_TongueOut,
-  FaceShape_TongueUp,
-  FaceShape_TongueDown,
-  FaceShape_TongueLeft,
-  FaceShape_TongueRight,
-  FaceShape_TongueRoll,
-  FaceShape_TongueBendDown,
-  FaceShape_TongueCurlUp,
-  FaceShape_TongueSquish,
-  FaceShape_TongueFlat,
-  FaceShape_TongueTwistLeft,
-  FaceShape_TongueTwistRight,
-};
-#ifndef __cplusplus
-#if __STDC_VERSION__ >= 202311L
-typedef enum FaceShape FaceShape;
-#else
-typedef uint8_t FaceShape;
-#endif // __STDC_VERSION__ >= 202311L
-#endif // __cplusplus
+#ifdef __cplusplus
+namespace snout {
+#endif  // __cplusplus
 
 /**
  * Represents an error that occurred during a Snout operation.
@@ -170,6 +115,65 @@ typedef uint8_t EyeShape;
 #endif // __STDC_VERSION__ >= 202311L
 #endif // __cplusplus
 
+enum FaceShape
+#if defined(__cplusplus) || __STDC_VERSION__ >= 202311L
+  : uint8_t
+#endif // defined(__cplusplus) || __STDC_VERSION__ >= 202311L
+ {
+  FaceShape_CheekPuffLeft,
+  FaceShape_CheekPuffRight,
+  FaceShape_CheekSuckLeft,
+  FaceShape_CheekSuckRight,
+  FaceShape_JawOpen,
+  FaceShape_JawForward,
+  FaceShape_JawLeft,
+  FaceShape_JawRight,
+  FaceShape_NoseSneerLeft,
+  FaceShape_NoseSneerRight,
+  FaceShape_MouthFunnel,
+  FaceShape_MouthPucker,
+  FaceShape_MouthLeft,
+  FaceShape_MouthRight,
+  FaceShape_MouthRollUpper,
+  FaceShape_MouthRollLower,
+  FaceShape_MouthShrugUpper,
+  FaceShape_MouthShrugLower,
+  FaceShape_MouthClose,
+  FaceShape_MouthSmileLeft,
+  FaceShape_MouthSmileRight,
+  FaceShape_MouthFrownLeft,
+  FaceShape_MouthFrownRight,
+  FaceShape_MouthDimpleLeft,
+  FaceShape_MouthDimpleRight,
+  FaceShape_MouthUpperUpLeft,
+  FaceShape_MouthUpperUpRight,
+  FaceShape_MouthLowerDownLeft,
+  FaceShape_MouthLowerDownRight,
+  FaceShape_MouthPressLeft,
+  FaceShape_MouthPressRight,
+  FaceShape_MouthStretchLeft,
+  FaceShape_MouthStretchRight,
+  FaceShape_TongueOut,
+  FaceShape_TongueUp,
+  FaceShape_TongueDown,
+  FaceShape_TongueLeft,
+  FaceShape_TongueRight,
+  FaceShape_TongueRoll,
+  FaceShape_TongueBendDown,
+  FaceShape_TongueCurlUp,
+  FaceShape_TongueSquish,
+  FaceShape_TongueFlat,
+  FaceShape_TongueTwistLeft,
+  FaceShape_TongueTwistRight,
+};
+#ifndef __cplusplus
+#if __STDC_VERSION__ >= 202311L
+typedef enum FaceShape FaceShape;
+#else
+typedef uint8_t FaceShape;
+#endif // __STDC_VERSION__ >= 202311L
+#endif // __cplusplus
+
 typedef struct BabbleEmitter BabbleEmitter;
 
 /**
@@ -217,86 +221,6 @@ typedef struct StereoCamera StereoCamera;
 typedef struct Weights_EyeShape Weights_EyeShape;
 
 typedef struct Weights_FaceShape Weights_FaceShape;
-
-/**
- * A decoded control command.
- */
-typedef enum ControlEvent_Tag {
-  /**
-   * Set the input calibration range (`lower`, `upper`) for a face shape.
-   */
-  ControlEvent_FaceBounds,
-  /**
-   * Begin a neutral-hold face calibration pass.
-   */
-  ControlEvent_FaceCalibrate,
-  /**
-   * Begin an upper-bound calibration pass for a single shape, capturing the
-   * peak over the given number of frames.
-   */
-  ControlEvent_FaceCalibrateUpper,
-} ControlEvent_Tag;
-
-typedef struct ControlEvent_FaceBounds_Body {
-  FaceShape _0;
-  float _1;
-  float _2;
-} ControlEvent_FaceBounds_Body;
-
-typedef struct ControlEvent_FaceCalibrateUpper_Body {
-  FaceShape _0;
-  uint32_t _1;
-} ControlEvent_FaceCalibrateUpper_Body;
-
-typedef struct ControlEvent {
-  ControlEvent_Tag tag;
-  union {
-    ControlEvent_FaceBounds_Body face_bounds;
-    ControlEvent_FaceCalibrateUpper_Body face_calibrate_upper;
-  };
-} ControlEvent;
-
-/**
- * Represents a pair of stereo camera frames.
- */
-typedef struct SnoutStereoCameraFrames {
-  const struct Frame *left;
-  const struct Frame *right;
-} SnoutStereoCameraFrames;
-
-typedef struct PreprocessConfig {
-  /**
-   * In degrees
-   */
-  float rotation;
-  float brightness;
-  bool horizontal_flip;
-  bool vertical_flip;
-} PreprocessConfig;
-
-/**
- * Specifies a square crop region.
- *
- * `major_shift` shifts the cropped region along the longest axis.
- * -1 and +1 correspond to the crop touching opposite edges.
- *
- * `minor_shift` shifts it along the shortest axis.
- * This will only have an effect when `scale` is larger than 1.0.
- *
- * Both values are in the range [-1.0, 1.0], with 0.0 being centered.
- */
-typedef struct Crop {
-  float major_shift;
-  float minor_shift;
-  float scale;
-} Crop;
-
-typedef struct Bounds {
-  float min;
-  float max;
-  float lower;
-  float upper;
-} Bounds;
 
 typedef struct SnoutFaceReport {
   /**
@@ -355,6 +279,48 @@ typedef struct SnoutOutputFields {
   struct EtvrEmitter *etvr;
 } SnoutOutputFields;
 
+typedef struct Bounds {
+  float min;
+  float max;
+  float lower;
+  float upper;
+} Bounds;
+
+typedef struct PreprocessConfig {
+  /**
+   * In degrees
+   */
+  float rotation;
+  float brightness;
+  bool horizontal_flip;
+  bool vertical_flip;
+} PreprocessConfig;
+
+/**
+ * Specifies a square crop region.
+ *
+ * `major_shift` shifts the cropped region along the longest axis.
+ * -1 and +1 correspond to the crop touching opposite edges.
+ *
+ * `minor_shift` shifts it along the shortest axis.
+ * This will only have an effect when `scale` is larger than 1.0.
+ *
+ * Both values are in the range [-1.0, 1.0], with 0.0 being centered.
+ */
+typedef struct Crop {
+  float major_shift;
+  float minor_shift;
+  float scale;
+} Crop;
+
+/**
+ * Represents a pair of stereo camera frames.
+ */
+typedef struct SnoutStereoCameraFrames {
+  const struct Frame *left;
+  const struct Frame *right;
+} SnoutStereoCameraFrames;
+
 
 
 #ifdef __cplusplus
@@ -370,338 +336,6 @@ extern const uintptr_t SNOUT_FACE_SHAPE_COUNT;
  * The number of eye shapes.
  */
 extern const uintptr_t SNOUT_EYE_SHAPE_COUNT;
-
-struct ControlEvent test_control(void);
-
-/**
- * Get the last error that occurred.
- *
- * Returns the last error code on this thread.
- */
-enum SnoutError snout_last_error(void);
-
-/**
- * Copies the error message from the last fallible call into `buffer`.
- *
- * The message is null-terminated.
- * Returns the length of the message not including the null terminator.
- *
- * If `buffer` is null or `max_len` is 0, returns the length of the message.
- *
- * This will return the error message for this thread.
- */
-uintptr_t snout_last_error_message(char *buffer, uintptr_t max_len);
-
-/**
- * Discover all available cameras.
- *
- * Results are accessed via [`snout_camera_name`] and [`snout_camera_source`].
- * Returns the number of cameras found.
- */
-uintptr_t snout_query_cameras(void);
-
-/**
- * Get the human-readable name for the camera at `index`.
- *
- * Copies the name into the buffer, null-terminating it.
- * The length of the name, not including the null terminator, is returned.
- *
- * If buffer is null or max_len is 0 then the length of the name is returned.
- */
-uintptr_t snout_camera_name(uintptr_t index, char *buffer, uintptr_t max_len);
-
-/**
- * Get the display name for the camera at `index`.
- *
- * Copies the display name into the buffer, null-terminating it.
- * The length of the display name, not including the null terminator, is returned.
- *
- * If buffer is null or max_len is 0 then the length of the display name is returned.
- */
-uintptr_t snout_camera_display_name(uintptr_t index, char *buffer, uintptr_t max_len);
-
-/**
- * Get the source for the camera at `index`.
- *
- * Returns null if `index` is out of bounds.
- * The pointer is valid until [`snout_camera_source_free`] is called.
- */
-struct CameraSource *snout_camera_source(uintptr_t index);
-
-/**
- * Free the camera source acquired by [`snout_camera_source`].
- */
-void snout_camera_source_free(struct CameraSource *source);
-
-/**
- * Compare two camera sources for equality.
- *
- * Returns `true` if the sources are equal, `false` otherwise.
- * If either source is null, returns `false`.
- */
-bool snout_camera_source_eq(const struct CameraSource *a, const struct CameraSource *b);
-
-/**
- * Open a mono camera using the given source.
- *
- * Returns null if the camera could not be opened.
- * Check [`snout_last_error`] for details.
- */
-struct MonoCamera *snout_mono_camera_open(const struct CameraSource *source);
-
-/**
- * Get the next frame from the mono camera.
- *
- * Returns null if the frame could not be retrieved.
- * Check [`snout_last_error`] for details.
- *
- * The returned pointer is valid until the next call to [`snout_mono_camera_get_frame`] or [`snout_mono_camera_free`].
- */
-const struct Frame *snout_mono_camera_get_frame(struct MonoCamera *camera);
-
-/**
- * Free the mono camera acquired by [`snout_mono_camera_open`].
- */
-void snout_mono_camera_free(struct MonoCamera *camera);
-
-/**
- * Get the width of the frame.
- */
-uintptr_t snout_frame_width(const struct Frame *frame);
-
-/**
- * Get the height of the frame.
- */
-uintptr_t snout_frame_height(const struct Frame *frame);
-
-/**
- * Get the data of the frame.
- *
- * This will not take ownership of the data.
- * The data length is [`snout_frame_width`] * [`snout_frame_height`].
- */
-const uint8_t *snout_frame_data(const struct Frame *frame);
-
-/**
- * Open a stereo camera using the specified left and right camera sources.
- *
- * Returns a pointer to the stereo camera, or null if the camera could not be opened.
- * Check [`snout_last_error`] for details.
- */
-struct StereoCamera *snout_stereo_camera_open(const struct CameraSource *left,
-                                              const struct CameraSource *right);
-
-/**
- * Open a stereo camera using a single side-by-side source.
- *
- * Returns a pointer to the stereo camera, or null if the camera could not be opened.
- * Check [`snout_last_error`] for details.
- */
-struct StereoCamera *snout_stereo_camera_open_sbs(const struct CameraSource *source);
-
-/**
- * Free the stereo camera acquired by [`snout_stereo_camera_open`] or [`snout_stereo_camera_open_sbs`].
- */
-void snout_stereo_camera_free(struct StereoCamera *camera);
-
-/**
- * Returns the stereo camera frames from the camera.
- *
- * The returned [`SnoutStereoCameraFrames`] struct contains pointers to [`Frame`] instances.
- * The frames are valid until the [`snout_stereo_camera_free`] or [`snout_stereo_camera_get_frames`] function is called.
- *
- * If an error occurs, the frames will be null and the error will be set.
- */
-struct SnoutStereoCameraFrames snout_stereo_camera_get_frames(struct StereoCamera *camera);
-
-/**
- * Create a new frame preprocessor.
- */
-struct FramePreprocessor *snout_frame_preprocessor_new(void);
-
-/**
- * Free the frame preprocessor created by [`snout_frame_preprocessor_new`].
- */
-void snout_frame_preprocessor_free(struct FramePreprocessor *preprocessor);
-
-/**
- * Get the current preprocessing configuration.
- *
- * returns a copy of the current configuration.
- */
-struct PreprocessConfig snout_frame_preprocessor_config(const struct FramePreprocessor *preprocessor);
-
-/**
- * Set the preprocessing configuration.
- */
-void snout_frame_preprocessor_set_config(struct FramePreprocessor *preprocessor,
-                                         struct PreprocessConfig config);
-
-/**
- * Get the current preprocessing crop.
- *
- * returns a copy of the current crop.
- */
-struct Crop snout_frame_preprocessor_crop(const struct FramePreprocessor *preprocessor);
-
-/**
- * Set the preprocessing crop.
- */
-void snout_frame_preprocessor_set_crop(struct FramePreprocessor *preprocessor,
-                                       const struct Crop *crop);
-
-/**
- * Process a frame using the preprocessor.
- *
- * Returns a pointer to the processed frame, or null if an error occurred.
- * The returned frame is valid until the next call to [`snout_frame_preprocessor_process`]
- * or [`snout_frame_preprocessor_free`].
- */
-const struct Frame *snout_frame_preprocessor_process(struct FramePreprocessor *preprocessor,
-                                                     const struct Frame *frame);
-
-/**
- * Create a new face pipeline.
- *
- * Returns a pointer to the pipeline.
- */
-struct FacePipeline *snout_face_pipeline_new(void);
-
-/**
- * Set the model for the face pipeline from the given path.
- *
- * Returns true if the model was loaded successfully, false otherwise.
- * Check [`snout_last_error`] for details.
- *
- * If path is null, the model will be unloaded.
- */
-bool snout_face_pipeline_set_model(struct FacePipeline *pipeline, const char *path);
-
-/**
- * Run the face pipeline on a frame.
- *
- * Returns a pointer to a `Weights<FaceShape>`, or null if the pipeline
- * was not ready yet or an error occurred.
- *
- * The returned pointer is valid until the next call to [`snout_face_pipeline_run`]
- * or [`snout_face_pipeline_free`].
- *
- * Check [`snout_get_last_error`] to determine which.
- * It will be `SnoutError_Ok` if the pipeline was not ready yet.
- */
-const struct Weights_FaceShape *snout_face_pipeline_run(struct FacePipeline *pipeline,
-                                                        const struct Frame *frame);
-
-/**
- * Free the face pipeline.
- */
-void snout_face_pipeline_free(struct FacePipeline *pipeline);
-
-/**
- * Create a new eye pipeline.
- */
-struct EyePipeline *snout_eye_pipeline_new(void);
-
-/**
- * Set the model for the eye pipeline from the given path.
- *
- * Returns true if the model was loaded successfully, false otherwise.
- * Check [`snout_last_error`] for details.
- *
- * If path is null, the model will be unloaded.
- */
-bool snout_eye_pipeline_set_model(struct EyePipeline *pipeline, const char *path);
-
-/**
- * Run the eye pipeline on a pair of stereo frames.
- *
- * Returns a pointer to a `Weights<EyeShape>`, or null if the pipeline
- * was not ready yet or an error occurred.
- *
- * The returned pointer is valid until the next call to [`snout_eye_pipeline_run`]
- * or [`snout_eye_pipeline_free`].
- *
- * Check [`snout_last_error`] to determine which.
- * It will be `SnoutError_Ok` if the pipeline was not ready yet.
- */
-const struct Weights_EyeShape *snout_eye_pipeline_run(struct EyePipeline *pipeline,
-                                                      const struct Frame *left,
-                                                      const struct Frame *right);
-
-/**
- * Free the eye pipeline.
- */
-void snout_eye_pipeline_free(struct EyePipeline *pipeline);
-
-/**
- * Create a new face calibrator.
- */
-struct ManualFaceCalibrator *snout_face_calibrator_new(void);
-
-/**
- * Get the calibration bounds for a face shape.
- */
-struct Bounds snout_face_calibrator_bounds(const struct ManualFaceCalibrator *calibrator,
-                                           FaceShape shape);
-
-/**
- * Set the calibration bounds for a face shape.
- */
-void snout_face_calibrator_set_bounds(struct ManualFaceCalibrator *calibrator,
-                                      FaceShape shape,
-                                      struct Bounds bounds);
-
-/**
- * Calibrate raw face weights.
- *
- * Returns a pointer to calibrated `Weights<FaceShape>`, or null if an error occurred.
- *
- * The returned pointer is valid until the next call to [`snout_face_calibrator_calibrate`]
- * or [`snout_face_calibrator_free`].
- */
-const struct Weights_FaceShape *snout_face_calibrator_calibrate(struct ManualFaceCalibrator *calibrator,
-                                                                const struct Weights_FaceShape *weights);
-
-/**
- *
- * Does nothing if the pointer is null.
- */
-void snout_face_calibrator_free(struct ManualFaceCalibrator *calibrator);
-
-/**
- * Create a new eye calibrator.
- */
-struct EyeFusion *snout_eye_calibrator_new(void);
-
-/**
- * Get the calibration bounds for an eye shape.
- */
-struct Bounds snout_eye_calibrator_bounds(const struct EyeFusion *calibrator, EyeShape shape);
-
-/**
- * Set the calibration bounds for an eye shape.
- */
-void snout_eye_calibrator_set_bounds(struct EyeFusion *calibrator,
-                                     EyeShape shape,
-                                     struct Bounds bounds);
-
-/**
- * Calibrate raw eye weights.
- *
- * Returns a pointer to calibrated `Weights<EyeShape>`, or null if an error occurred.
- *
- * The returned pointer is valid until the next call to [`snout_eye_calibrator_calibrate`]
- * or [`snout_eye_calibrator_free`].
- */
-const struct Weights_EyeShape *snout_eye_calibrator_calibrate(struct EyeFusion *calibrator,
-                                                              const struct Weights_EyeShape *weights);
-
-/**
- * Free the eye calibrator.
- *
- * Does nothing if the pointer is null.
- */
-void snout_eye_calibrator_free(struct EyeFusion *calibrator);
 
 /**
  * Creates a new [`FaceTracker`].
@@ -917,12 +551,393 @@ struct Config *snout_config_load(const char *path);
  */
 void snout_config_free(struct Config *config);
 
-bool snout_eye_weights_get(const struct Weights_EyeShape *weights, EyeShape shape, float *out);
+/**
+ * Get the last error that occurred.
+ *
+ * Returns the last error code on this thread.
+ */
+enum SnoutError snout_last_error(void);
 
-bool snout_face_weights_get(const struct Weights_FaceShape *weights, FaceShape shape, float *out);
+/**
+ * Copies the error message from the last fallible call into `buffer`.
+ *
+ * The message is null-terminated.
+ * Returns the length of the message not including the null terminator.
+ *
+ * If `buffer` is null or `max_len` is 0, returns the length of the message.
+ *
+ * This will return the error message for this thread.
+ */
+uintptr_t snout_last_error_message(char *buffer, uintptr_t max_len);
+
+/**
+ * Create a new eye fusion.
+ */
+struct EyeFusion *snout_eye_fusion_new(void);
+
+/**
+ * Get the calibration bounds for an eye shape.
+ */
+struct Bounds snout_eye_fusion_bounds(const struct EyeFusion *fusion, EyeShape shape);
+
+/**
+ * Set the calibration bounds for an eye shape.
+ */
+void snout_eye_fusion_set_bounds(struct EyeFusion *fusion, EyeShape shape, struct Bounds bounds);
+
+/**
+ * Calibrate raw eye weights.
+ *
+ * Returns a pointer to calibrated `Weights<EyeShape>`, or null if an error occurred.
+ *
+ * The returned pointer is valid until the next call to [`snout_eye_fusion_calibrate`]
+ * or [`snout_eye_fusion_free`].
+ */
+const struct Weights_EyeShape *snout_eye_fusion_calibrate(struct EyeFusion *fusion,
+                                                          const struct Weights_EyeShape *weights);
+
+/**
+ * Free the eye fusion.
+ *
+ * Does nothing if the pointer is null.
+ */
+void snout_eye_fusion_free(struct EyeFusion *fusion);
+
+/**
+ * Create a new eye pipeline.
+ */
+struct EyePipeline *snout_eye_pipeline_new(void);
+
+/**
+ * Set the model for the eye pipeline from the given path.
+ *
+ * Returns true if the model was loaded successfully, false otherwise.
+ * Check [`snout_last_error`] for details.
+ *
+ * If path is null, the model will be unloaded.
+ */
+bool snout_eye_pipeline_set_model(struct EyePipeline *pipeline, const char *path);
+
+/**
+ * Run the eye pipeline on a pair of stereo frames.
+ *
+ * Returns a pointer to a `Weights<EyeShape>`, or null if the pipeline
+ * was not ready yet or an error occurred.
+ *
+ * The returned pointer is valid until the next call to [`snout_eye_pipeline_run`]
+ * or [`snout_eye_pipeline_free`].
+ *
+ * Check [`snout_last_error`] to determine which.
+ * It will be `SnoutError_Ok` if the pipeline was not ready yet.
+ */
+const struct Weights_EyeShape *snout_eye_pipeline_run(struct EyePipeline *pipeline,
+                                                      const struct Frame *left,
+                                                      const struct Frame *right);
+
+/**
+ * Free the eye pipeline.
+ */
+void snout_eye_pipeline_free(struct EyePipeline *pipeline);
+
+/**
+ * Create a new face calibrator.
+ */
+struct ManualFaceCalibrator *snout_face_calibrator_new(void);
+
+/**
+ * Get the calibration bounds for a face shape.
+ */
+struct Bounds snout_face_calibrator_bounds(const struct ManualFaceCalibrator *calibrator,
+                                           FaceShape shape);
+
+/**
+ * Set the calibration bounds for a face shape.
+ */
+void snout_face_calibrator_set_bounds(struct ManualFaceCalibrator *calibrator,
+                                      FaceShape shape,
+                                      struct Bounds bounds);
+
+/**
+ * Start auto calibration of the upper bounds for a particular shape.
+ */
+void snout_face_calibrator_start_upper_calibration(struct ManualFaceCalibrator *calibrator,
+                                                   FaceShape shape,
+                                                   uintptr_t frames);
+
+/**
+ * Start auto calibration of the lower bounds.
+ */
+void snout_face_calibrator_start_lower_calibration(struct ManualFaceCalibrator *calibrator,
+                                                   uintptr_t frames);
+
+/**
+ * Calibrate raw face weights.
+ *
+ * Returns a pointer to calibrated `Weights<FaceShape>`, or null if an error occurred.
+ *
+ * The returned pointer is valid until the next call to [`snout_face_calibrator_calibrate`]
+ * or [`snout_face_calibrator_free`].
+ */
+const struct Weights_FaceShape *snout_face_calibrator_calibrate(struct ManualFaceCalibrator *calibrator,
+                                                                const struct Weights_FaceShape *weights);
+
+/**
+ *
+ * Does nothing if the pointer is null.
+ */
+void snout_face_calibrator_free(struct ManualFaceCalibrator *calibrator);
+
+/**
+ * Create a new face pipeline.
+ *
+ * Returns a pointer to the pipeline.
+ */
+struct FacePipeline *snout_face_pipeline_new(void);
+
+/**
+ * Set the model for the face pipeline from the given path.
+ *
+ * Returns true if the model was loaded successfully, false otherwise.
+ * Check [`snout_last_error`] for details.
+ *
+ * If path is null, the model will be unloaded.
+ */
+bool snout_face_pipeline_set_model(struct FacePipeline *pipeline, const char *path);
+
+/**
+ * Run the face pipeline on a frame.
+ *
+ * Returns a pointer to a `Weights<FaceShape>`, or null if the pipeline
+ * was not ready yet or an error occurred.
+ *
+ * The returned pointer is valid until the next call to [`snout_face_pipeline_run`]
+ * or [`snout_face_pipeline_free`].
+ *
+ * Check [`snout_get_last_error`] to determine which.
+ * It will be `SnoutError_Ok` if the pipeline was not ready yet.
+ */
+const struct Weights_FaceShape *snout_face_pipeline_run(struct FacePipeline *pipeline,
+                                                        const struct Frame *frame);
+
+/**
+ * Free the face pipeline.
+ */
+void snout_face_pipeline_free(struct FacePipeline *pipeline);
+
+/**
+ * Get the width of the frame.
+ */
+uintptr_t snout_frame_width(const struct Frame *frame);
+
+/**
+ * Get the height of the frame.
+ */
+uintptr_t snout_frame_height(const struct Frame *frame);
+
+/**
+ * Get the data of the frame.
+ *
+ * This will not take ownership of the data.
+ * The data length is [`snout_frame_width`] * [`snout_frame_height`].
+ */
+const uint8_t *snout_frame_data(const struct Frame *frame);
+
+/**
+ * Open a mono camera using the given source.
+ *
+ * Returns null if the camera could not be opened.
+ * Check [`snout_last_error`] for details.
+ */
+struct MonoCamera *snout_mono_camera_open(const struct CameraSource *source);
+
+/**
+ * Get the next frame from the mono camera.
+ *
+ * Returns null if the frame could not be retrieved.
+ * Check [`snout_last_error`] for details.
+ *
+ * The returned pointer is valid until the next call to [`snout_mono_camera_get_frame`] or [`snout_mono_camera_free`].
+ */
+const struct Frame *snout_mono_camera_get_frame(struct MonoCamera *camera);
+
+/**
+ * Free the mono camera acquired by [`snout_mono_camera_open`].
+ */
+void snout_mono_camera_free(struct MonoCamera *camera);
+
+/**
+ * Create a new frame preprocessor.
+ */
+struct FramePreprocessor *snout_frame_preprocessor_new(void);
+
+/**
+ * Free the frame preprocessor created by [`snout_frame_preprocessor_new`].
+ */
+void snout_frame_preprocessor_free(struct FramePreprocessor *preprocessor);
+
+/**
+ * Get the current preprocessing configuration.
+ *
+ * returns a copy of the current configuration.
+ */
+struct PreprocessConfig snout_frame_preprocessor_config(const struct FramePreprocessor *preprocessor);
+
+/**
+ * Set the preprocessing configuration.
+ */
+void snout_frame_preprocessor_set_config(struct FramePreprocessor *preprocessor,
+                                         struct PreprocessConfig config);
+
+/**
+ * Get the current preprocessing crop.
+ *
+ * returns a copy of the current crop.
+ */
+struct Crop snout_frame_preprocessor_crop(const struct FramePreprocessor *preprocessor);
+
+/**
+ * Set the preprocessing crop.
+ */
+void snout_frame_preprocessor_set_crop(struct FramePreprocessor *preprocessor,
+                                       const struct Crop *crop);
+
+/**
+ * Process a frame using the preprocessor.
+ *
+ * Returns a pointer to the processed frame, or null if an error occurred.
+ * The returned frame is valid until the next call to [`snout_frame_preprocessor_process`]
+ * or [`snout_frame_preprocessor_free`].
+ */
+const struct Frame *snout_frame_preprocessor_process(struct FramePreprocessor *preprocessor,
+                                                     const struct Frame *frame);
+
+/**
+ * Discover all available cameras.
+ *
+ * Results are accessed via [`snout_camera_name`] and [`snout_camera_source`].
+ * Returns the number of cameras found.
+ */
+uintptr_t snout_query_cameras(void);
+
+/**
+ * Get the human-readable name for the camera at `index`.
+ *
+ * Copies the name into the buffer, null-terminating it.
+ * The length of the name, not including the null terminator, is returned.
+ *
+ * If buffer is null or max_len is 0 then the length of the name is returned.
+ */
+uintptr_t snout_camera_name(uintptr_t index, char *buffer, uintptr_t max_len);
+
+/**
+ * Get the display name for the camera at `index`.
+ *
+ * Copies the display name into the buffer, null-terminating it.
+ * The length of the display name, not including the null terminator, is returned.
+ *
+ * If buffer is null or max_len is 0 then the length of the display name is returned.
+ */
+uintptr_t snout_camera_display_name(uintptr_t index, char *buffer, uintptr_t max_len);
+
+/**
+ * Get the source for the camera at `index`.
+ *
+ * Returns null if `index` is out of bounds.
+ * The pointer is valid until [`snout_camera_source_free`] is called.
+ */
+struct CameraSource *snout_camera_source(uintptr_t index);
+
+/**
+ * Free the camera source acquired by [`snout_camera_source`].
+ */
+void snout_camera_source_free(struct CameraSource *source);
+
+/**
+ * Compare two camera sources for equality.
+ *
+ * Returns `true` if the sources are equal, `false` otherwise.
+ * If either source is null, returns `false`.
+ */
+bool snout_camera_source_eq(const struct CameraSource *a, const struct CameraSource *b);
+
+/**
+ * Open a stereo camera using the specified left and right camera sources.
+ *
+ * Returns a pointer to the stereo camera, or null if the camera could not be opened.
+ * Check [`snout_last_error`] for details.
+ */
+struct StereoCamera *snout_stereo_camera_open(const struct CameraSource *left,
+                                              const struct CameraSource *right);
+
+/**
+ * Open a stereo camera using a single side-by-side source.
+ *
+ * Returns a pointer to the stereo camera, or null if the camera could not be opened.
+ * Check [`snout_last_error`] for details.
+ */
+struct StereoCamera *snout_stereo_camera_open_sbs(const struct CameraSource *source);
+
+/**
+ * Open a stereo camera and duplicate the source.
+ *
+ * This will open a [`StereoCamera`] with the same source duplicated to both cameras.
+ *
+ * Returns a pointer to the stereo camera, or null if the camera could not be opened.
+ * Check [`snout_last_error`] for details.
+ */
+struct StereoCamera *snout_stereo_camera_open_duplicate(const struct CameraSource *source);
+
+/**
+ * Open a stereo camera from two sources.
+ *
+ * - both sources set to the *same* camera -> side-by-side
+ * - both sources set to *different* cameras -> dual
+ * - exactly one source set -> duplicate (single-eye tracking)
+ * - neither source set -> error
+ *
+ * Returns a pointer to the stereo camera, or null if the camera could not be opened.
+ * Check [`snout_last_error`] for details.
+ */
+struct StereoCamera *snout_stereo_camera_from_sources(const struct CameraSource *left,
+                                                      const struct CameraSource *right);
+
+/**
+ * Free the stereo camera acquired by [`snout_stereo_camera_open`] or [`snout_stereo_camera_open_sbs`].
+ */
+void snout_stereo_camera_free(struct StereoCamera *camera);
+
+/**
+ * Returns the stereo camera frames from the camera.
+ *
+ * The returned [`SnoutStereoCameraFrames`] struct contains pointers to [`Frame`] instances.
+ * The frames are valid until the [`snout_stereo_camera_free`] or [`snout_stereo_camera_get_frames`] function is called.
+ *
+ * If an error occurs, the frames will be null and the error will be set.
+ */
+struct SnoutStereoCameraFrames snout_stereo_camera_get_frames(struct StereoCamera *camera);
+
+/**
+ * Gets the weight for a given shape.
+ *
+ * Returns `true` if the weight was found, `false` otherwise.
+ * If out is not null, it will be set to the value.
+ */
+bool snout_face_weights_get(struct Weights_FaceShape *weights, FaceShape shape, float *out);
+
+/**
+ * Gets the weight for a given shape.
+ *
+ * Returns `true` if the weight was found, `false` otherwise.
+ * If out is not null, it will be set to the value.
+ */
+bool snout_eye_weights_get(struct Weights_EyeShape *weights, EyeShape shape, float *out);
 
 #ifdef __cplusplus
 }  // extern "C"
+#endif  // __cplusplus
+
+#ifdef __cplusplus
+}  // namespace snout
 #endif  // __cplusplus
 
 #endif  /* snout_h */
