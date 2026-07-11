@@ -1,11 +1,12 @@
-use std::io;
 use std::net::{ToSocketAddrs, UdpSocket};
 use std::path::PathBuf;
 use std::str::FromStr;
 
 use rosc::{OscMessage, OscPacket, OscType};
+use thiserror::Error;
 
 use crate::calibration::FaceShape;
+use crate::config::Config;
 
 pub mod event;
 
@@ -13,6 +14,14 @@ pub use event::{ControlEvent, EyeEvent, FaceEvent, Side};
 
 /// The largest OSC datagram we'll accept.
 const MAX_PACKET_SIZE: usize = 1024;
+
+#[derive(Clone, Debug, Error)]
+pub enum ControlError {
+    #[error("failed to bind UDP socket")]
+    Bind(String),
+    #[error("failed to receive OSC packet")]
+    ReceiveError(String),
+}
 
 /// Receives control commands over OSC/UDP.
 pub struct Control {
@@ -22,18 +31,29 @@ pub struct Control {
 
 impl Control {
     /// Binds a UDP socket to `addr` and listens for control messages.
-    pub fn bind(addr: impl ToSocketAddrs) -> io::Result<Self> {
+    pub fn bind(addr: impl ToSocketAddrs) -> Result<Self, ControlError> {
         Ok(Self {
-            socket: UdpSocket::bind(addr)?,
+            socket: UdpSocket::bind(addr).map_err(|e| ControlError::Bind(e.to_string()))?,
             buf: [0; MAX_PACKET_SIZE],
         })
+    }
+
+    pub fn with_config(config: &Config) -> Result<Option<Self>, ControlError> {
+        if let Some(subconfig) = &config.control {
+            Self::bind(&subconfig.listen).map(Some)
+        } else {
+            Ok(None)
+        }
     }
 
     /// Blocks until a datagram arrives.
     ///
     /// Invokes `f` once for every recognized event it carries.
-    pub fn receive(&mut self, mut f: impl FnMut(ControlEvent)) -> io::Result<()> {
-        let (len, _) = self.socket.recv_from(&mut self.buf)?;
+    pub fn receive(&mut self, mut f: impl FnMut(ControlEvent)) -> Result<(), ControlError> {
+        let (len, _) = self
+            .socket
+            .recv_from(&mut self.buf)
+            .map_err(|e| ControlError::ReceiveError(e.to_string()))?;
 
         if let Ok((_, packet)) = rosc::decoder::decode_udp(&self.buf[..len]) {
             dispatch_packet(packet, &mut f);
