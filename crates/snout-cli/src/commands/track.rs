@@ -10,7 +10,7 @@ use snout::{
     calibration::EyeShape,
     capture::discovery::{CameraInfo, query_cameras},
     config::Config,
-    control::{ControlEvent, EyeEvent, FaceEvent, OscControl},
+    control::{Control, ControlEvent, EyeEvent, FaceEvent},
     track::{eye::EyeTracker, face::FaceTracker, initialize_runtime, output::Output},
 };
 
@@ -163,7 +163,7 @@ impl TrackCommand {
 }
 
 fn run_control(listen: String, face: Sender<FaceEvent>, eye: Sender<EyeEvent>) {
-    let mut control = match OscControl::bind(&listen) {
+    let mut control = match Control::bind(&listen) {
         Ok(control) => {
             tracing::info!(listen = %listen, "control listener started");
             control

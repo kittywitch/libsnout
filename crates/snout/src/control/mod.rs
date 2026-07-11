@@ -15,12 +15,12 @@ pub use event::{ControlEvent, EyeEvent, FaceEvent, Side};
 const MAX_PACKET_SIZE: usize = 1024;
 
 /// Receives control commands over OSC/UDP.
-pub struct OscControl {
+pub struct Control {
     socket: UdpSocket,
     buf: [u8; MAX_PACKET_SIZE],
 }
 
-impl OscControl {
+impl Control {
     /// Binds a UDP socket to `addr` and listens for control messages.
     pub fn bind(addr: impl ToSocketAddrs) -> io::Result<Self> {
         Ok(Self {
