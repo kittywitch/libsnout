@@ -1,4 +1,7 @@
-use std::path::{Path, PathBuf};
+use std::{
+    path::{Path, PathBuf},
+    sync::Mutex,
+};
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -18,6 +21,70 @@ pub enum ConfigError {
     FileNotFound,
     #[error("Invalid format: {0}")]
     InvalidConfig(String),
+    #[error("Failed to write: {0}")]
+    FailedWrite(String),
+}
+
+pub struct ConfigFile {
+    path: PathBuf,
+    base: PathBuf,
+    config: Mutex<Config>,
+}
+
+impl ConfigFile {
+    pub fn from_path(path: impl AsRef<Path>) -> Result<Self, ConfigError> {
+        let path = path.as_ref();
+        let base = path.parent().unwrap_or(Path::new("."));
+
+        let str = std::fs::read_to_string(path).map_err(|_| ConfigError::FileNotFound)?;
+        let config = toml::from_str(&str).map_err(|e| ConfigError::InvalidConfig(e.to_string()))?;
+
+        Ok(Self {
+            path: path.to_path_buf(),
+            base: base.to_path_buf(),
+            config: Mutex::new(config),
+        })
+    }
+
+    pub fn resolved(&self) -> Config {
+        let config = self.config.lock().expect("Failed to lock config");
+
+        let mut resolved_config = config.clone();
+
+        resolved_config.libonnxruntime = resolved_config
+            .libonnxruntime
+            .map(|p| resolve_path(&self.base, p));
+
+        resolved_config.eye.model = resolved_config
+            .eye
+            .model
+            .map(|p| resolve_path(&self.base, p));
+
+        resolved_config.face.model = resolved_config
+            .face
+            .model
+            .map(|p| resolve_path(&self.base, p));
+
+        resolved_config
+    }
+
+    pub fn update<R>(&self, f: impl FnOnce(&mut Config) -> R) -> R {
+        let mut config = self.config.lock().expect("Failed to lock config");
+
+        f(&mut config)
+    }
+
+    pub fn save(&self) -> Result<(), ConfigError> {
+        let config = self.config.lock().expect("Failed to lock config");
+
+        let contents = toml::to_string_pretty(&*config)
+            .map_err(|e| ConfigError::InvalidConfig(e.to_string()))?;
+
+        std::fs::write(&self.path, contents)
+            .map_err(|e| ConfigError::FailedWrite(e.to_string()))?;
+
+        Ok(())
+    }
 }
 
 fn resolve_path(base: &Path, path: PathBuf) -> PathBuf {
@@ -71,6 +138,7 @@ pub fn load(path: impl AsRef<Path>) -> Result<Config, ConfigError> {
     let mut config: Config =
         toml::from_str(&str).map_err(|e| ConfigError::InvalidConfig(e.to_string()))?;
 
+    // TODO: Remove these once we switch over to using `ConfigFile`.
     config.libonnxruntime = config.libonnxruntime.map(|p| resolve_path(base, p));
     config.eye.model = config.eye.model.map(|p| resolve_path(base, p));
     config.face.model = config.face.model.map(|p| resolve_path(base, p));

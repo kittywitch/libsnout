@@ -48,6 +48,7 @@ pub enum SnoutError {
     ConfigFileNotFound,
     /// The config file could not be parsed.
     ConfigInvalidConfig,
+    ConfigFailedWrite,
 }
 
 impl From<TransportError> for SnoutError {
@@ -102,6 +103,7 @@ impl From<ConfigError> for SnoutError {
         match error {
             ConfigError::FileNotFound => SnoutError::ConfigFileNotFound,
             ConfigError::InvalidConfig(_) => SnoutError::ConfigInvalidConfig,
+            ConfigError::FailedWrite(_) => SnoutError::ConfigFailedWrite,
         }
     }
 }
