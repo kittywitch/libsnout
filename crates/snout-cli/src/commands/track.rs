@@ -38,11 +38,7 @@ impl TrackCommand {
         let (eye_tx, eye_rx) = mpsc::channel();
 
         thread::scope(|scope| {
-            if let Some(control) = &self.config.control {
-                let listen = control.listen.clone();
-                scope.spawn(move || run_control(listen, face_tx, eye_tx));
-            }
-
+            scope.spawn(move || self.run_control(face_tx, eye_tx));
             scope.spawn(move || self.run_face(cameras, multi, face_rx));
             scope.spawn(move || self.run_eye(cameras, multi, eye_rx));
         });
@@ -149,6 +145,46 @@ impl TrackCommand {
         }
     }
 
+    fn run_control(&self, face: Sender<FaceEvent>, eye: Sender<EyeEvent>) {
+        let Some(subconfig) = &self.config.control else {
+            tracing::info!("Control disabled");
+            return;
+        };
+
+        let mut control = match Control::bind(&subconfig.listen) {
+            Ok(control) => {
+                tracing::info!(listen = %subconfig.listen, "control listener started");
+                control
+            }
+            Err(error) => {
+                tracing::error!(%error, listen = %subconfig.listen, "failed to bind control listener");
+                return;
+            }
+        };
+
+        let mut running = true;
+
+        while running {
+            let result = control.receive(|event| match event {
+                ControlEvent::Face { event } => {
+                    if face.send(event).is_err() {
+                        running = false;
+                    }
+                }
+                ControlEvent::Eye { event } => {
+                    if eye.send(event).is_err() {
+                        running = false;
+                    }
+                }
+            });
+
+            if let Err(error) = result {
+                tracing::error!(%error, "control listener stopped");
+                break;
+            }
+        }
+    }
+
     /// Per-tick throttle, matching the single-loop behavior: sleep for the
     /// configured `interval` (skipped when it's 0), or 10ms by default.
     fn throttle(&self) {
@@ -158,41 +194,6 @@ impl TrackCommand {
             }
         } else {
             sleep(Duration::from_millis(10));
-        }
-    }
-}
-
-fn run_control(listen: String, face: Sender<FaceEvent>, eye: Sender<EyeEvent>) {
-    let mut control = match Control::bind(&listen) {
-        Ok(control) => {
-            tracing::info!(listen = %listen, "control listener started");
-            control
-        }
-        Err(error) => {
-            tracing::error!(%error, listen = %listen, "failed to bind control listener");
-            return;
-        }
-    };
-
-    let mut running = true;
-
-    while running {
-        let result = control.receive(|event| match event {
-            ControlEvent::Face { event } => {
-                if face.send(event).is_err() {
-                    running = false;
-                }
-            }
-            ControlEvent::Eye { event } => {
-                if eye.send(event).is_err() {
-                    running = false;
-                }
-            }
-        });
-
-        if let Err(error) = result {
-            tracing::error!(%error, "control listener stopped");
-            break;
         }
     }
 }
