@@ -6,6 +6,10 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#ifdef __cplusplus
+namespace snout {
+#endif  // __cplusplus
+
 /**
  * Represents an error that occurred during a Snout operation.
  */
@@ -80,7 +84,37 @@ typedef enum SnoutError {
    * The config file could not be parsed.
    */
   SnoutError_ConfigInvalidConfig,
+  SnoutError_ConfigFailedWrite,
 } SnoutError;
+
+enum EyeShape
+#if defined(__cplusplus) || __STDC_VERSION__ >= 202311L
+  : uint8_t
+#endif // defined(__cplusplus) || __STDC_VERSION__ >= 202311L
+ {
+  EyeShape_LeftEyePitch,
+  EyeShape_LeftEyeYaw,
+  EyeShape_LeftEyeLid,
+  EyeShape_LeftEyeWiden,
+  EyeShape_LeftEyeBrow,
+  EyeShape_LeftEyeSquint,
+  EyeShape_RightEyePitch,
+  EyeShape_RightEyeYaw,
+  EyeShape_RightEyeLid,
+  EyeShape_RightEyeWiden,
+  EyeShape_RightEyeBrow,
+  EyeShape_RightEyeSquint,
+  EyeShape_EyePitchVersion,
+  EyeShape_EyeYawVersion,
+  EyeShape_EyeYawVergence,
+};
+#ifndef __cplusplus
+#if __STDC_VERSION__ >= 202311L
+typedef enum EyeShape EyeShape;
+#else
+typedef uint8_t EyeShape;
+#endif // __STDC_VERSION__ >= 202311L
+#endif // __cplusplus
 
 enum FaceShape
 #if defined(__cplusplus) || __STDC_VERSION__ >= 202311L
@@ -141,32 +175,6 @@ typedef uint8_t FaceShape;
 #endif // __STDC_VERSION__ >= 202311L
 #endif // __cplusplus
 
-enum EyeShape
-#if defined(__cplusplus) || __STDC_VERSION__ >= 202311L
-  : uint8_t
-#endif // defined(__cplusplus) || __STDC_VERSION__ >= 202311L
- {
-  EyeShape_LeftEyePitch,
-  EyeShape_LeftEyeYaw,
-  EyeShape_LeftEyeLid,
-  EyeShape_LeftEyeWiden,
-  EyeShape_LeftEyeBrow,
-  EyeShape_LeftEyeSquint,
-  EyeShape_RightEyePitch,
-  EyeShape_RightEyeYaw,
-  EyeShape_RightEyeLid,
-  EyeShape_RightEyeWiden,
-  EyeShape_RightEyeBrow,
-  EyeShape_RightEyeSquint,
-};
-#ifndef __cplusplus
-#if __STDC_VERSION__ >= 202311L
-typedef enum EyeShape EyeShape;
-#else
-typedef uint8_t EyeShape;
-#endif // __STDC_VERSION__ >= 202311L
-#endif // __cplusplus
-
 typedef struct BabbleEmitter BabbleEmitter;
 
 /**
@@ -178,7 +186,10 @@ typedef struct Config Config;
 
 typedef struct EtvrEmitter EtvrEmitter;
 
-typedef struct EyeCalibrator EyeCalibrator;
+/**
+ * Spatial fusion of raw per-eye gaze estimates into a coherent binocular gaze.
+ */
+typedef struct EyeFusion EyeFusion;
 
 typedef struct EyePipeline EyePipeline;
 
@@ -212,13 +223,69 @@ typedef struct Weights_EyeShape Weights_EyeShape;
 
 typedef struct Weights_FaceShape Weights_FaceShape;
 
-/**
- * Represents a pair of stereo camera frames.
- */
-typedef struct SnoutStereoCameraFrames {
-  const struct Frame *left;
-  const struct Frame *right;
-} SnoutStereoCameraFrames;
+typedef struct Bounds {
+  float min;
+  float max;
+  float lower;
+  float upper;
+} Bounds;
+
+typedef struct SnoutEyeReport {
+  /**
+   * The raw left frame.
+   */
+  const struct Frame *left_raw_frame;
+  /**
+   * The raw right frame.
+   */
+  const struct Frame *right_raw_frame;
+  /**
+   * The left frame after preprocessing.
+   */
+  const struct Frame *left_processed_frame;
+  /**
+   * The right frame after preprocessing.
+   */
+  const struct Frame *right_processed_frame;
+  /**
+   * A pointer to the weights, or null during warmup.
+   */
+  const struct Weights_EyeShape *weights;
+} SnoutEyeReport;
+
+typedef struct SnoutEyeTrackerFields {
+  struct FramePreprocessor *left_preprocessor;
+  struct FramePreprocessor *right_preprocessor;
+  struct EyeFusion *fusion;
+  struct EyePipeline *pipeline;
+} SnoutEyeTrackerFields;
+
+typedef struct SnoutFaceReport {
+  /**
+   * The raw frame.
+   */
+  const struct Frame *raw_frame;
+  /**
+   * The frame after preprocessing.
+   */
+  const struct Frame *processed_frame;
+  /**
+   * A pointer to the weights.
+   */
+  const struct Weights_FaceShape *weights;
+} SnoutFaceReport;
+
+typedef struct SnoutFaceTrackerFields {
+  struct FramePreprocessor *preprocessor;
+  struct FacePipeline *pipeline;
+  struct ManualFaceCalibrator *calibrator;
+} SnoutFaceTrackerFields;
+
+typedef struct SnoutOutputFields {
+  struct OscTransport *transport;
+  struct BabbleEmitter *babble;
+  struct EtvrEmitter *etvr;
+} SnoutOutputFields;
 
 typedef struct PreprocessConfig {
   /**
@@ -247,75 +314,13 @@ typedef struct Crop {
   float scale;
 } Crop;
 
-typedef struct FilterParameters {
-  bool enable;
-  float min_cutoff;
-  float beta;
-} FilterParameters;
-
-typedef struct Bounds {
-  float min;
-  float max;
-  float lower;
-  float upper;
-} Bounds;
-
-typedef struct SnoutFaceReport {
-  /**
-   * The raw frame.
-   */
-  const struct Frame *raw_frame;
-  /**
-   * The frame after preprocessing.
-   */
-  const struct Frame *processed_frame;
-  /**
-   * A pointer to the weights.
-   */
-  const struct Weights_FaceShape *weights;
-} SnoutFaceReport;
-
-typedef struct SnoutFaceTrackerFields {
-  struct FramePreprocessor *preprocessor;
-  struct FacePipeline *pipeline;
-  struct ManualFaceCalibrator *calibrator;
-} SnoutFaceTrackerFields;
-
-typedef struct SnoutEyeReport {
-  /**
-   * The raw left frame.
-   */
-  const struct Frame *left_raw_frame;
-  /**
-   * The raw right frame.
-   */
-  const struct Frame *right_raw_frame;
-  /**
-   * The left frame after preprocessing.
-   */
-  const struct Frame *left_processed_frame;
-  /**
-   * The right frame after preprocessing.
-   */
-  const struct Frame *right_processed_frame;
-  /**
-   * A pointer to the weights, or null during warmup.
-   */
-  const struct Weights_EyeShape *weights;
-} SnoutEyeReport;
-
-typedef struct SnoutEyeTrackerFields {
-  struct FramePreprocessor *left_preprocessor;
-  struct FramePreprocessor *right_preprocessor;
-  struct EyePipeline *pipeline;
-  struct EyeCalibrator *calibrator;
-} SnoutEyeTrackerFields;
-
-typedef struct SnoutOutputFields {
-  struct OscTransport *transport;
-  struct BabbleEmitter *babble;
-  struct EtvrEmitter *etvr;
-} SnoutOutputFields;
+/**
+ * Represents a pair of stereo camera frames.
+ */
+typedef struct SnoutStereoCameraFrames {
+  const struct Frame *left;
+  const struct Frame *right;
+} SnoutStereoCameraFrames;
 
 
 
@@ -332,6 +337,52 @@ extern const uintptr_t SNOUT_FACE_SHAPE_COUNT;
  * The number of eye shapes.
  */
 extern const uintptr_t SNOUT_EYE_SHAPE_COUNT;
+
+/**
+ * Initialize the runtime.
+ *
+ * If `path` is not null, it will be considered first when searching for `libonnxruntime.so`.
+ */
+void snout_initialize_runtime(const char *path);
+
+/**
+ * Create a new Babble emitter.
+ */
+struct BabbleEmitter *snout_babble_emitter_new(void);
+
+/**
+ * Free a Babble emitter.
+ */
+void snout_babble_emitter_free(struct BabbleEmitter *emitter);
+
+/**
+ * Send face weights via the Babble protocol.
+ */
+void snout_babble_emitter_process_face(struct BabbleEmitter *emitter,
+                                       const struct Weights_FaceShape *weights,
+                                       struct OscTransport *transport);
+
+/**
+ * Send eye weights via the Babble protocol.
+ */
+void snout_babble_emitter_process_eyes(struct BabbleEmitter *emitter,
+                                       const struct Weights_EyeShape *weights,
+                                       struct OscTransport *transport);
+
+/**
+ * Load a configuration file from the given path.
+ *
+ * Will return null if the path is null or if the file cannot be parsed.
+ * Check [`snout_get_last_error`] to get the error code and message.
+ *
+ * The returned object must be freed with [`snout_config_free`].
+ */
+struct Config *snout_config_load(const char *path);
+
+/**
+ * Free the given config created by [`snout_config_load`].
+ */
+void snout_config_free(struct Config *config);
 
 /**
  * Get the last error that occurred.
@@ -351,6 +402,422 @@ enum SnoutError snout_last_error(void);
  * This will return the error message for this thread.
  */
 uintptr_t snout_last_error_message(char *buffer, uintptr_t max_len);
+
+/**
+ * Create a new ETVR emitter.
+ */
+struct EtvrEmitter *snout_etvr_emitter_new(void);
+
+/**
+ * Free an ETVR emitter.
+ */
+void snout_etvr_emitter_free(struct EtvrEmitter *emitter);
+
+/**
+ * Send eye weights via the ETVR protocol.
+ */
+void snout_etvr_emitter_process_eyes(struct EtvrEmitter *emitter,
+                                     const struct Weights_EyeShape *weights,
+                                     struct OscTransport *transport);
+
+/**
+ * Create a new eye fusion.
+ */
+struct EyeFusion *snout_eye_fusion_new(void);
+
+/**
+ * Get the calibration bounds for an eye shape.
+ */
+struct Bounds snout_eye_fusion_bounds(const struct EyeFusion *fusion, EyeShape shape);
+
+/**
+ * Set the calibration bounds for an eye shape.
+ */
+void snout_eye_fusion_set_bounds(struct EyeFusion *fusion, EyeShape shape, struct Bounds bounds);
+
+/**
+ * Calibrate raw eye weights.
+ *
+ * Returns a pointer to calibrated `Weights<EyeShape>`, or null if an error occurred.
+ *
+ * The returned pointer is valid until the next call to [`snout_eye_fusion_calibrate`]
+ * or [`snout_eye_fusion_free`].
+ */
+const struct Weights_EyeShape *snout_eye_fusion_calibrate(struct EyeFusion *fusion,
+                                                          const struct Weights_EyeShape *weights);
+
+/**
+ * Free the eye fusion.
+ *
+ * Does nothing if the pointer is null.
+ */
+void snout_eye_fusion_free(struct EyeFusion *fusion);
+
+/**
+ * Create a new eye pipeline.
+ */
+struct EyePipeline *snout_eye_pipeline_new(void);
+
+/**
+ * Set the model for the eye pipeline from the given path.
+ *
+ * Returns true if the model was loaded successfully, false otherwise.
+ * Check [`snout_last_error`] for details.
+ *
+ * If path is null, the model will be unloaded.
+ */
+bool snout_eye_pipeline_set_model(struct EyePipeline *pipeline, const char *path);
+
+/**
+ * Run the eye pipeline on a pair of stereo frames.
+ *
+ * Returns a pointer to a `Weights<EyeShape>`, or null if the pipeline
+ * was not ready yet or an error occurred.
+ *
+ * The returned pointer is valid until the next call to [`snout_eye_pipeline_run`]
+ * or [`snout_eye_pipeline_free`].
+ *
+ * Check [`snout_last_error`] to determine which.
+ * It will be `SnoutError_Ok` if the pipeline was not ready yet.
+ */
+const struct Weights_EyeShape *snout_eye_pipeline_run(struct EyePipeline *pipeline,
+                                                      const struct Frame *left,
+                                                      const struct Frame *right);
+
+/**
+ * Free the eye pipeline.
+ */
+void snout_eye_pipeline_free(struct EyePipeline *pipeline);
+
+/**
+ * Creates a new [`EyeTracker`].
+ */
+struct EyeTracker *snout_eye_tracker_new(void);
+
+/**
+ * Creates a new [`EyeTracker`] with the given configuration.
+ *
+ * You have to make sure `snout_query_cameras` was called before calling this function, otherwise the source will be null.
+ *
+ * Returns null if there was an error, check [`snout_last_error`] for details.
+ */
+struct EyeTracker *snout_eye_tracker_with_config(const struct Config *config);
+
+/**
+ * Drops an [`EyeTracker`] instance created by [`snout_eye_tracker_new`].
+ */
+void snout_eye_tracker_free(struct EyeTracker *tracker);
+
+/**
+ * Set the camera sources for the [`EyeTracker`] instance.
+ *
+ * If both sources are null, the camera will be closed.
+ * If left and right point to the same source, the camera will be opened in side-by-side mode.
+ */
+void snout_eye_tracker_set_source(struct EyeTracker *tracker,
+                                  const struct CameraSource *left,
+                                  const struct CameraSource *right);
+
+/**
+ * Track eyes using the [`EyeTracker`] instance.
+ *
+ * Returns a null report if the tracker is null or an error occurs.
+ * See [`snout_last_error`] for details.
+ *
+ * If the error is [`SnoutError_Ok`], then there was insufficient data or a transient error.
+ */
+struct SnoutEyeReport snout_eye_tracker_track(struct EyeTracker *tracker);
+
+/**
+ * Returns the raw pointers to the [`EyeTracker`] fields.
+ *
+ * This can be used for configuring the tracker.
+ * Pointers are valid until [`snout_eye_tracker_free`] is called.
+ */
+struct SnoutEyeTrackerFields snout_eye_tracker_fields(struct EyeTracker *tracker);
+
+/**
+ * Create a new face calibrator.
+ */
+struct ManualFaceCalibrator *snout_face_calibrator_new(void);
+
+/**
+ * Get the calibration bounds for a face shape.
+ */
+struct Bounds snout_face_calibrator_bounds(const struct ManualFaceCalibrator *calibrator,
+                                           FaceShape shape);
+
+/**
+ * Set the calibration bounds for a face shape.
+ */
+void snout_face_calibrator_set_bounds(struct ManualFaceCalibrator *calibrator,
+                                      FaceShape shape,
+                                      struct Bounds bounds);
+
+/**
+ * Start auto calibration of the upper bounds for a particular shape.
+ */
+void snout_face_calibrator_start_upper_calibration(struct ManualFaceCalibrator *calibrator,
+                                                   FaceShape shape,
+                                                   uintptr_t frames);
+
+/**
+ * Start auto calibration of the lower bounds.
+ */
+void snout_face_calibrator_start_lower_calibration(struct ManualFaceCalibrator *calibrator,
+                                                   uintptr_t frames);
+
+/**
+ * Calibrate raw face weights.
+ *
+ * Returns a pointer to calibrated `Weights<FaceShape>`, or null if an error occurred.
+ *
+ * The returned pointer is valid until the next call to [`snout_face_calibrator_calibrate`]
+ * or [`snout_face_calibrator_free`].
+ */
+const struct Weights_FaceShape *snout_face_calibrator_calibrate(struct ManualFaceCalibrator *calibrator,
+                                                                const struct Weights_FaceShape *weights);
+
+/**
+ *
+ * Does nothing if the pointer is null.
+ */
+void snout_face_calibrator_free(struct ManualFaceCalibrator *calibrator);
+
+/**
+ * Create a new face pipeline.
+ *
+ * Returns a pointer to the pipeline.
+ */
+struct FacePipeline *snout_face_pipeline_new(void);
+
+/**
+ * Set the model for the face pipeline from the given path.
+ *
+ * Returns true if the model was loaded successfully, false otherwise.
+ * Check [`snout_last_error`] for details.
+ *
+ * If path is null, the model will be unloaded.
+ */
+bool snout_face_pipeline_set_model(struct FacePipeline *pipeline, const char *path);
+
+/**
+ * Run the face pipeline on a frame.
+ *
+ * Returns a pointer to a `Weights<FaceShape>`, or null if the pipeline
+ * was not ready yet or an error occurred.
+ *
+ * The returned pointer is valid until the next call to [`snout_face_pipeline_run`]
+ * or [`snout_face_pipeline_free`].
+ *
+ * Check [`snout_get_last_error`] to determine which.
+ * It will be `SnoutError_Ok` if the pipeline was not ready yet.
+ */
+const struct Weights_FaceShape *snout_face_pipeline_run(struct FacePipeline *pipeline,
+                                                        const struct Frame *frame);
+
+/**
+ * Free the face pipeline.
+ */
+void snout_face_pipeline_free(struct FacePipeline *pipeline);
+
+/**
+ * Creates a new [`FaceTracker`].
+ */
+struct FaceTracker *snout_face_tracker_new(void);
+
+/**
+ * Creates a new [`FaceTracker`] with the given configuration.
+ *
+ * You have to make sure `snout_query_cameras` was called before calling this function, otherwise the source will be null.
+ *
+ * Returns null if there was an error, check [`snout_last_error`] for details.
+ */
+struct FaceTracker *snout_face_tracker_with_config(const struct Config *config);
+
+/**
+ * Drops a [`FaceTracker`] instance created by [`snout_face_tracker_new`].
+ */
+void snout_face_tracker_free(struct FaceTracker *tracker);
+
+/**
+ * Set the camera source for the [`FaceTracker`] instance.
+ *
+ * If `source` is null, the camera will be closed.
+ */
+void snout_face_tracker_set_source(struct FaceTracker *tracker, const struct CameraSource *source);
+
+/**
+ * Track a face using the [`FaceTracker`] instance.
+ *
+ * Returns a null report if the tracker is null or an error occurs.
+ * See [`snout_last_error`] for details.
+ *
+ * If the error is [`SnoutError_Ok`], then there was insufficient data or a transient error.
+ * Call [`snout_face_tracker_track`] again to retry.
+ */
+struct SnoutFaceReport snout_face_tracker_track(struct FaceTracker *tracker);
+
+/**
+ * Returns the raw pointers to the [`FaceTracker`] fields.
+ *
+ * This can be used for configuring the tracker.
+ * Pointers are valid until [`snout_face_tracker_free`] is called.
+ */
+struct SnoutFaceTrackerFields snout_face_tracker_fields(struct FaceTracker *tracker);
+
+/**
+ * Get the width of the frame.
+ */
+uintptr_t snout_frame_width(const struct Frame *frame);
+
+/**
+ * Get the height of the frame.
+ */
+uintptr_t snout_frame_height(const struct Frame *frame);
+
+/**
+ * Get the data of the frame.
+ *
+ * This will not take ownership of the data.
+ * The data length is [`snout_frame_width`] * [`snout_frame_height`].
+ */
+const uint8_t *snout_frame_data(const struct Frame *frame);
+
+/**
+ * Open a mono camera using the given source.
+ *
+ * Returns null if the camera could not be opened.
+ * Check [`snout_last_error`] for details.
+ */
+struct MonoCamera *snout_mono_camera_open(const struct CameraSource *source);
+
+/**
+ * Get the next frame from the mono camera.
+ *
+ * Returns null if the frame could not be retrieved.
+ * Check [`snout_last_error`] for details.
+ *
+ * The returned pointer is valid until the next call to [`snout_mono_camera_get_frame`] or [`snout_mono_camera_free`].
+ */
+const struct Frame *snout_mono_camera_get_frame(struct MonoCamera *camera);
+
+/**
+ * Free the mono camera acquired by [`snout_mono_camera_open`].
+ */
+void snout_mono_camera_free(struct MonoCamera *camera);
+
+/**
+ * Create a new UDP OSC transport.
+ *
+ * `destination` is a null-terminated string like "127.0.0.1:9000".
+ * Returns null if the socket could not be bound or the address could not be resolved.
+ * See [`snout_last_error`] for details.
+ */
+struct OscTransport *snout_osc_transport_udp(const char *destination);
+
+/**
+ * Free an OSC transport.
+ */
+void snout_osc_transport_free(struct OscTransport *transport);
+
+/**
+ * Flush the OSC transport.
+ *
+ * Check [`snout_last_error`] to see if an error occurred.
+ */
+void snout_osc_transport_flush(struct OscTransport *transport);
+
+/**
+ * Create a new output.
+ *
+ * You need to call [`snout_output_set_destination`] to set the destination address.
+ * The resulting object is owned by the caller and must be freed with [`snout_output_free`].
+ */
+struct Output *snout_output_new(void);
+
+/**
+ * Free an output.
+ */
+void snout_output_free(struct Output *output);
+
+/**
+ * Set the destination address of the output.
+ *
+ * `destination` is a null-terminated string like "127.0.0.1:9400".
+ */
+void snout_output_set_destination(struct Output *output, const char *destination);
+
+/**
+ * Send face weights via all enabled face emitters.
+ */
+void snout_output_send_face(struct Output *output, const struct Weights_FaceShape *weights);
+
+/**
+ * Send eye weights via all enabled eye emitters.
+ */
+void snout_output_send_eyes(struct Output *output, const struct Weights_EyeShape *weights);
+
+/**
+ * Flush the output transport.
+ */
+void snout_output_flush(struct Output *output);
+
+/**
+ * Returns the raw pointers to the [`Output`] fields.
+ *
+ * This can be used for direct access to the transport and emitters.
+ * Pointers are valid until [`snout_output_free`] is called.
+ *
+ * The transport pointer is null if no destination is set.
+ */
+struct SnoutOutputFields snout_output_fields(struct Output *output);
+
+/**
+ * Create a new frame preprocessor.
+ */
+struct FramePreprocessor *snout_frame_preprocessor_new(void);
+
+/**
+ * Free the frame preprocessor created by [`snout_frame_preprocessor_new`].
+ */
+void snout_frame_preprocessor_free(struct FramePreprocessor *preprocessor);
+
+/**
+ * Get the current preprocessing configuration.
+ *
+ * returns a copy of the current configuration.
+ */
+struct PreprocessConfig snout_frame_preprocessor_config(const struct FramePreprocessor *preprocessor);
+
+/**
+ * Set the preprocessing configuration.
+ */
+void snout_frame_preprocessor_set_config(struct FramePreprocessor *preprocessor,
+                                         struct PreprocessConfig config);
+
+/**
+ * Get the current preprocessing crop.
+ *
+ * returns a copy of the current crop.
+ */
+struct Crop snout_frame_preprocessor_crop(const struct FramePreprocessor *preprocessor);
+
+/**
+ * Set the preprocessing crop.
+ */
+void snout_frame_preprocessor_set_crop(struct FramePreprocessor *preprocessor,
+                                       const struct Crop *crop);
+
+/**
+ * Process a frame using the preprocessor.
+ *
+ * Returns a pointer to the processed frame, or null if an error occurred.
+ * The returned frame is valid until the next call to [`snout_frame_preprocessor_process`]
+ * or [`snout_frame_preprocessor_free`].
+ */
+const struct Frame *snout_frame_preprocessor_process(struct FramePreprocessor *preprocessor,
+                                                     const struct Frame *frame);
 
 /**
  * Discover all available cameras.
@@ -402,47 +869,6 @@ void snout_camera_source_free(struct CameraSource *source);
 bool snout_camera_source_eq(const struct CameraSource *a, const struct CameraSource *b);
 
 /**
- * Open a mono camera using the given source.
- *
- * Returns null if the camera could not be opened.
- * Check [`snout_last_error`] for details.
- */
-struct MonoCamera *snout_mono_camera_open(const struct CameraSource *source);
-
-/**
- * Get the next frame from the mono camera.
- *
- * Returns null if the frame could not be retrieved.
- * Check [`snout_last_error`] for details.
- *
- * The returned pointer is valid until the next call to [`snout_mono_camera_get_frame`] or [`snout_mono_camera_free`].
- */
-const struct Frame *snout_mono_camera_get_frame(struct MonoCamera *camera);
-
-/**
- * Free the mono camera acquired by [`snout_mono_camera_open`].
- */
-void snout_mono_camera_free(struct MonoCamera *camera);
-
-/**
- * Get the width of the frame.
- */
-uintptr_t snout_frame_width(const struct Frame *frame);
-
-/**
- * Get the height of the frame.
- */
-uintptr_t snout_frame_height(const struct Frame *frame);
-
-/**
- * Get the data of the frame.
- *
- * This will not take ownership of the data.
- * The data length is [`snout_frame_width`] * [`snout_frame_height`].
- */
-const uint8_t *snout_frame_data(const struct Frame *frame);
-
-/**
  * Open a stereo camera using the specified left and right camera sources.
  *
  * Returns a pointer to the stereo camera, or null if the camera could not be opened.
@@ -460,6 +886,30 @@ struct StereoCamera *snout_stereo_camera_open(const struct CameraSource *left,
 struct StereoCamera *snout_stereo_camera_open_sbs(const struct CameraSource *source);
 
 /**
+ * Open a stereo camera and duplicate the source.
+ *
+ * This will open a [`StereoCamera`] with the same source duplicated to both cameras.
+ *
+ * Returns a pointer to the stereo camera, or null if the camera could not be opened.
+ * Check [`snout_last_error`] for details.
+ */
+struct StereoCamera *snout_stereo_camera_open_duplicate(const struct CameraSource *source);
+
+/**
+ * Open a stereo camera from two sources.
+ *
+ * - both sources set to the *same* camera -> side-by-side
+ * - both sources set to *different* cameras -> dual
+ * - exactly one source set -> duplicate (single-eye tracking)
+ * - neither source set -> error
+ *
+ * Returns a pointer to the stereo camera, or null if the camera could not be opened.
+ * Check [`snout_last_error`] for details.
+ */
+struct StereoCamera *snout_stereo_camera_from_sources(const struct CameraSource *left,
+                                                      const struct CameraSource *right);
+
+/**
  * Free the stereo camera acquired by [`snout_stereo_camera_open`] or [`snout_stereo_camera_open_sbs`].
  */
 void snout_stereo_camera_free(struct StereoCamera *camera);
@@ -475,450 +925,27 @@ void snout_stereo_camera_free(struct StereoCamera *camera);
 struct SnoutStereoCameraFrames snout_stereo_camera_get_frames(struct StereoCamera *camera);
 
 /**
- * Create a new frame preprocessor.
- */
-struct FramePreprocessor *snout_frame_preprocessor_new(void);
-
-/**
- * Free the frame preprocessor created by [`snout_frame_preprocessor_new`].
- */
-void snout_frame_preprocessor_free(struct FramePreprocessor *preprocessor);
-
-/**
- * Get the current preprocessing configuration.
+ * Gets the weight for a given shape.
  *
- * returns a copy of the current configuration.
+ * Returns `true` if the weight was found, `false` otherwise.
+ * If out is not null, it will be set to the value.
  */
-struct PreprocessConfig snout_frame_preprocessor_config(const struct FramePreprocessor *preprocessor);
+bool snout_face_weights_get(struct Weights_FaceShape *weights, FaceShape shape, float *out);
 
 /**
- * Set the preprocessing configuration.
- */
-void snout_frame_preprocessor_set_config(struct FramePreprocessor *preprocessor,
-                                         struct PreprocessConfig config);
-
-/**
- * Get the current preprocessing crop.
+ * Gets the weight for a given shape.
  *
- * returns a copy of the current crop.
+ * Returns `true` if the weight was found, `false` otherwise.
+ * If out is not null, it will be set to the value.
  */
-struct Crop snout_frame_preprocessor_crop(const struct FramePreprocessor *preprocessor);
-
-/**
- * Set the preprocessing crop.
- */
-void snout_frame_preprocessor_set_crop(struct FramePreprocessor *preprocessor,
-                                       const struct Crop *crop);
-
-/**
- * Process a frame using the preprocessor.
- *
- * Returns a pointer to the processed frame, or null if an error occurred.
- * The returned frame is valid until the next call to [`snout_frame_preprocessor_process`]
- * or [`snout_frame_preprocessor_free`].
- */
-const struct Frame *snout_frame_preprocessor_process(struct FramePreprocessor *preprocessor,
-                                                     const struct Frame *frame);
-
-/**
- * Create a new face pipeline.
- *
- * Returns a pointer to the pipeline.
- */
-struct FacePipeline *snout_face_pipeline_new(void);
-
-/**
- * Set the model for the face pipeline from the given path.
- *
- * Returns true if the model was loaded successfully, false otherwise.
- * Check [`snout_last_error`] for details.
- *
- * If path is null, the model will be unloaded.
- */
-bool snout_face_pipeline_set_model(struct FacePipeline *pipeline, const char *path);
-
-/**
- * Get the current filter parameters of the face pipeline.
- *
- * Returns a copy of the current filter parameters.
- */
-struct FilterParameters snout_face_pipeline_filter(const struct FacePipeline *pipeline);
-
-/**
- * Set the filter parameters of the face pipeline.
- */
-void snout_face_pipeline_set_filter(struct FacePipeline *pipeline,
-                                    struct FilterParameters parameters);
-
-/**
- * Run the face pipeline on a frame.
- *
- * Returns a pointer to a `Weights<FaceShape>`, or null if the pipeline
- * was not ready yet or an error occurred.
- *
- * The returned pointer is valid until the next call to [`snout_face_pipeline_run`]
- * or [`snout_face_pipeline_free`].
- *
- * Check [`snout_get_last_error`] to determine which.
- * It will be `SnoutError_Ok` if the pipeline was not ready yet.
- */
-const struct Weights_FaceShape *snout_face_pipeline_run(struct FacePipeline *pipeline,
-                                                        const struct Frame *frame);
-
-/**
- * Free the face pipeline.
- */
-void snout_face_pipeline_free(struct FacePipeline *pipeline);
-
-/**
- * Create a new eye pipeline.
- */
-struct EyePipeline *snout_eye_pipeline_new(void);
-
-/**
- * Set the model for the eye pipeline from the given path.
- *
- * Returns true if the model was loaded successfully, false otherwise.
- * Check [`snout_last_error`] for details.
- *
- * If path is null, the model will be unloaded.
- */
-bool snout_eye_pipeline_set_model(struct EyePipeline *pipeline, const char *path);
-
-/**
- * Get the current filter parameters of the eye pipeline.
- *
- * Returns a copy of the current filter parameters.
- */
-struct FilterParameters snout_eye_pipeline_filter(const struct EyePipeline *pipeline);
-
-/**
- * Set the filter parameters of the eye pipeline.
- */
-void snout_eye_pipeline_set_filter(struct EyePipeline *pipeline,
-                                   struct FilterParameters parameters);
-
-/**
- * Run the eye pipeline on a pair of stereo frames.
- *
- * Returns a pointer to a `Weights<EyeShape>`, or null if the pipeline
- * was not ready yet or an error occurred.
- *
- * The returned pointer is valid until the next call to [`snout_eye_pipeline_run`]
- * or [`snout_eye_pipeline_free`].
- *
- * Check [`snout_last_error`] to determine which.
- * It will be `SnoutError_Ok` if the pipeline was not ready yet.
- */
-const struct Weights_EyeShape *snout_eye_pipeline_run(struct EyePipeline *pipeline,
-                                                      const struct Frame *left,
-                                                      const struct Frame *right);
-
-/**
- * Free the eye pipeline.
- */
-void snout_eye_pipeline_free(struct EyePipeline *pipeline);
-
-/**
- * Create a new face calibrator.
- */
-struct ManualFaceCalibrator *snout_face_calibrator_new(void);
-
-/**
- * Get the calibration bounds for a face shape.
- */
-struct Bounds snout_face_calibrator_bounds(const struct ManualFaceCalibrator *calibrator,
-                                           FaceShape shape);
-
-/**
- * Set the calibration bounds for a face shape.
- */
-void snout_face_calibrator_set_bounds(struct ManualFaceCalibrator *calibrator,
-                                      FaceShape shape,
-                                      struct Bounds bounds);
-
-/**
- * Calibrate raw face weights.
- *
- * Returns a pointer to calibrated `Weights<FaceShape>`, or null if an error occurred.
- *
- * The returned pointer is valid until the next call to [`snout_face_calibrator_calibrate`]
- * or [`snout_face_calibrator_free`].
- */
-const struct Weights_FaceShape *snout_face_calibrator_calibrate(struct ManualFaceCalibrator *calibrator,
-                                                                const struct Weights_FaceShape *weights);
-
-/**
- *
- * Does nothing if the pointer is null.
- */
-void snout_face_calibrator_free(struct ManualFaceCalibrator *calibrator);
-
-/**
- * Create a new eye calibrator.
- */
-struct EyeCalibrator *snout_eye_calibrator_new(void);
-
-/**
- * Get the calibration bounds for an eye shape.
- */
-struct Bounds snout_eye_calibrator_bounds(const struct EyeCalibrator *calibrator, EyeShape shape);
-
-/**
- * Set the calibration bounds for an eye shape.
- */
-void snout_eye_calibrator_set_bounds(struct EyeCalibrator *calibrator,
-                                     EyeShape shape,
-                                     struct Bounds bounds);
-
-/**
- * Get whether the eye calibrator links the eyes.
- */
-bool snout_eye_calibrator_link_eyes(const struct EyeCalibrator *calibrator);
-
-/**
- * Set whether the eye calibrator links the eyes.
- */
-void snout_eye_calibrator_set_link_eyes(struct EyeCalibrator *calibrator, bool link_eyes);
-
-/**
- * Calibrate raw eye weights.
- *
- * Returns a pointer to calibrated `Weights<EyeShape>`, or null if an error occurred.
- *
- * The returned pointer is valid until the next call to [`snout_eye_calibrator_calibrate`]
- * or [`snout_eye_calibrator_free`].
- */
-const struct Weights_EyeShape *snout_eye_calibrator_calibrate(struct EyeCalibrator *calibrator,
-                                                              const struct Weights_EyeShape *weights);
-
-/**
- * Free the eye calibrator.
- *
- * Does nothing if the pointer is null.
- */
-void snout_eye_calibrator_free(struct EyeCalibrator *calibrator);
-
-/**
- * Creates a new [`FaceTracker`].
- */
-struct FaceTracker *snout_face_tracker_new(void);
-
-/**
- * Creates a new [`FaceTracker`] with the given configuration.
- *
- * You have to make sure `snout_query_cameras` was called before calling this function, otherwise the source will be null.
- *
- * Returns null if there was an error, check [`snout_last_error`] for details.
- */
-struct FaceTracker *snout_face_tracker_with_config(const struct Config *config);
-
-/**
- * Drops a [`FaceTracker`] instance created by [`snout_face_tracker_new`].
- */
-void snout_face_tracker_free(struct FaceTracker *tracker);
-
-/**
- * Set the camera source for the [`FaceTracker`] instance.
- *
- * If `source` is null, the camera will be closed.
- */
-void snout_face_tracker_set_source(struct FaceTracker *tracker, const struct CameraSource *source);
-
-/**
- * Track a face using the [`FaceTracker`] instance.
- *
- * Returns a null report if the tracker is null or an error occurs.
- * See [`snout_last_error`] for details.
- *
- * If the error is [`SnoutError_Ok`], then there was insufficient data or a transient error.
- * Call [`snout_face_tracker_track`] again to retry.
- */
-struct SnoutFaceReport snout_face_tracker_track(struct FaceTracker *tracker);
-
-/**
- * Returns the raw pointers to the [`FaceTracker`] fields.
- *
- * This can be used for configuring the tracker.
- * Pointers are valid until [`snout_face_tracker_free`] is called.
- */
-struct SnoutFaceTrackerFields snout_face_tracker_fields(struct FaceTracker *tracker);
-
-/**
- * Create a new UDP OSC transport.
- *
- * `destination` is a null-terminated string like "127.0.0.1:9000".
- * Returns null if the socket could not be bound or the address could not be resolved.
- * See [`snout_last_error`] for details.
- */
-struct OscTransport *snout_osc_transport_udp(const char *destination);
-
-/**
- * Free an OSC transport.
- */
-void snout_osc_transport_free(struct OscTransport *transport);
-
-/**
- * Flush the OSC transport.
- *
- * Check [`snout_last_error`] to see if an error occurred.
- */
-void snout_osc_transport_flush(struct OscTransport *transport);
-
-/**
- * Create a new Babble emitter.
- */
-struct BabbleEmitter *snout_babble_emitter_new(void);
-
-/**
- * Free a Babble emitter.
- */
-void snout_babble_emitter_free(struct BabbleEmitter *emitter);
-
-/**
- * Send face weights via the Babble protocol.
- */
-void snout_babble_emitter_process_face(struct BabbleEmitter *emitter,
-                                       const struct Weights_FaceShape *weights,
-                                       struct OscTransport *transport);
-
-/**
- * Create a new ETVR emitter.
- */
-struct EtvrEmitter *snout_etvr_emitter_new(void);
-
-/**
- * Free an ETVR emitter.
- */
-void snout_etvr_emitter_free(struct EtvrEmitter *emitter);
-
-/**
- * Send eye weights via the ETVR protocol.
- */
-void snout_etvr_emitter_process_eyes(struct EtvrEmitter *emitter,
-                                     const struct Weights_EyeShape *weights,
-                                     struct OscTransport *transport);
-
-/**
- * Creates a new [`EyeTracker`].
- */
-struct EyeTracker *snout_eye_tracker_new(void);
-
-/**
- * Creates a new [`EyeTracker`] with the given configuration.
- *
- * You have to make sure `snout_query_cameras` was called before calling this function, otherwise the source will be null.
- *
- * Returns null if there was an error, check [`snout_last_error`] for details.
- */
-struct EyeTracker *snout_eye_tracker_with_config(const struct Config *config);
-
-/**
- * Drops an [`EyeTracker`] instance created by [`snout_eye_tracker_new`].
- */
-void snout_eye_tracker_free(struct EyeTracker *tracker);
-
-/**
- * Set the camera sources for the [`EyeTracker`] instance.
- *
- * If both sources are null, the camera will be closed.
- * If left and right point to the same source, the camera will be opened in side-by-side mode.
- */
-void snout_eye_tracker_set_source(struct EyeTracker *tracker,
-                                  const struct CameraSource *left,
-                                  const struct CameraSource *right);
-
-/**
- * Track eyes using the [`EyeTracker`] instance.
- *
- * Returns a null report if the tracker is null or an error occurs.
- * See [`snout_last_error`] for details.
- *
- * If the error is [`SnoutError_Ok`], then there was insufficient data or a transient error.
- */
-struct SnoutEyeReport snout_eye_tracker_track(struct EyeTracker *tracker);
-
-/**
- * Returns the raw pointers to the [`EyeTracker`] fields.
- *
- * This can be used for configuring the tracker.
- * Pointers are valid until [`snout_eye_tracker_free`] is called.
- */
-struct SnoutEyeTrackerFields snout_eye_tracker_fields(struct EyeTracker *tracker);
-
-/**
- * Create a new output.
- *
- * You need to call [`snout_output_set_destination`] to set the destination address.
- * The resulting object is owned by the caller and must be freed with [`snout_output_free`].
- */
-struct Output *snout_output_new(void);
-
-/**
- * Free an output.
- */
-void snout_output_free(struct Output *output);
-
-/**
- * Set the destination address of the output.
- *
- * `destination` is a null-terminated string like "127.0.0.1:9400".
- */
-void snout_output_set_destination(struct Output *output, const char *destination);
-
-/**
- * Send face weights via all enabled face emitters.
- */
-void snout_output_send_face(struct Output *output, const struct Weights_FaceShape *weights);
-
-/**
- * Send eye weights via all enabled eye emitters.
- */
-void snout_output_send_eyes(struct Output *output, const struct Weights_EyeShape *weights);
-
-/**
- * Flush the output transport.
- */
-void snout_output_flush(struct Output *output);
-
-/**
- * Returns the raw pointers to the [`Output`] fields.
- *
- * This can be used for direct access to the transport and emitters.
- * Pointers are valid until [`snout_output_free`] is called.
- *
- * The transport pointer is null if no destination is set.
- */
-struct SnoutOutputFields snout_output_fields(struct Output *output);
-
-/**
- * Initialize the runtime.
- *
- * If `path` is not null, it will be considered first when searching for `libonnxruntime.so`.
- */
-void snout_initialize_runtime(const char *path);
-
-/**
- * Load a configuration file from the given path.
- *
- * Will return null if the path is null or if the file cannot be parsed.
- * Check [`snout_get_last_error`] to get the error code and message.
- *
- * The returned object must be freed with [`snout_config_free`].
- */
-struct Config *snout_config_load(const char *path);
-
-/**
- * Free the given config created by [`snout_config_load`].
- */
-void snout_config_free(struct Config *config);
-
-bool snout_eye_weights_get(const struct Weights_EyeShape *weights, EyeShape shape, float *out);
-
-bool snout_face_weights_get(const struct Weights_FaceShape *weights, FaceShape shape, float *out);
+bool snout_eye_weights_get(struct Weights_EyeShape *weights, EyeShape shape, float *out);
 
 #ifdef __cplusplus
 }  // extern "C"
+#endif  // __cplusplus
+
+#ifdef __cplusplus
+}  // namespace snout
 #endif  // __cplusplus
 
 #endif  /* snout_h */

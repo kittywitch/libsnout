@@ -185,3 +185,61 @@ impl StatusBarItem for Pair {
         .into()
     }
 }
+
+pub struct Float {
+    label: Cow<'static, str>,
+    value: Cell<f32>,
+}
+
+impl Float {
+    pub fn new(label: impl Into<Cow<'static, str>>) -> Self {
+        Self {
+            label: label.into(),
+            value: Cell::new(0.0),
+        }
+    }
+
+    pub fn set(&self, value: f32) {
+        self.value.set(value);
+    }
+}
+
+impl StatusBarItem for Float {
+    fn render(&self) -> Cow<'static, str> {
+        format!("{}:{:.2}", self.label, self.value.get()).into()
+    }
+}
+
+/// Gaze readout, rendered as `LABEL:(+0.12,-0.34)`.
+pub struct Vector {
+    label: &'static str,
+    pitch: Cell<f32>,
+    yaw: Cell<f32>,
+}
+
+impl Vector {
+    pub fn new(label: &'static str) -> Self {
+        Self {
+            label,
+            pitch: Cell::new(0.0),
+            yaw: Cell::new(0.0),
+        }
+    }
+
+    pub fn set(&self, pitch: f32, yaw: f32) {
+        self.pitch.set(pitch);
+        self.yaw.set(yaw);
+    }
+}
+
+impl StatusBarItem for Vector {
+    fn render(&self) -> Cow<'static, str> {
+        format!(
+            "{}:({:+.2},{:+.2})",
+            self.label,
+            self.pitch.get(),
+            self.yaw.get()
+        )
+        .into()
+    }
+}

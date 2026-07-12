@@ -1,0 +1,176 @@
+use std::path::PathBuf;
+
+use crate::{
+    calibration::{FaceShape, ManualFaceCalibrator},
+    capture::{
+        CameraError, Frame, MonoCamera,
+        discovery::{CameraInfo, CameraSource, resolve_source},
+        processing::FramePreprocessor,
+        sensor::SensorConfig,
+    },
+    config::Config,
+    control::FaceEvent,
+    filter::FaceFilter,
+    pipeline::FacePipeline,
+    track::TrackerError,
+    weights::Weights,
+};
+
+pub struct FaceReport<'a> {
+    pub raw_frame: &'a Frame,
+    pub processed_frame: &'a Frame,
+    pub weights: &'a Weights<FaceShape>,
+}
+
+pub struct FaceTracker {
+    pub preprocessor: FramePreprocessor,
+    pub pipeline: FacePipeline,
+    pub filter: FaceFilter,
+    pub calibrator: ManualFaceCalibrator,
+
+    camera: Option<MonoCamera>,
+    source: Option<CameraSource>,
+    sensor_config: Option<SensorConfig>,
+
+    capture: Option<PathBuf>,
+}
+
+impl FaceTracker {
+    pub fn new() -> Self {
+        Self {
+            preprocessor: FramePreprocessor::new(),
+            pipeline: FacePipeline::new(),
+            filter: FaceFilter::new(),
+            calibrator: ManualFaceCalibrator::new(),
+
+            camera: None,
+            source: None,
+            sensor_config: None,
+
+            capture: None,
+        }
+    }
+
+    pub fn with_config(cameras: &[CameraInfo], config: &Config) -> Result<Self, TrackerError> {
+        let mut tracker = Self::new();
+
+        tracker.pipeline.set_model(config.face.model.as_ref())?;
+
+        if let Some(filter) = config.face.filter {
+            tracker.filter.set_parameters(filter);
+        }
+
+        let camera = resolve_source(cameras, &config.face.camera);
+
+        tracker.set_source(camera);
+
+        if let Some(gc0308) = config.face.gc0308.clone() {
+            tracker.sensor_config = Some(SensorConfig::Gc0308(gc0308));
+        }
+
+        tracker.preprocessor.set_crop(config.face.crop);
+
+        if let Some(transform) = &config.face.transform {
+            tracker.preprocessor.set_config(*transform);
+        }
+
+        for calibration in &config.face.calibration {
+            tracker
+                .calibrator
+                .set_upper(calibration.shape, calibration.upper);
+            tracker
+                .calibrator
+                .set_lower(calibration.shape, calibration.lower);
+        }
+
+        Ok(tracker)
+    }
+
+    /// Sets the camera source for the tracker.
+    ///
+    /// If the source is different from the current source, the camera is reset.
+    pub fn set_source(&mut self, source: Option<CameraSource>) {
+        if self.source != source {
+            self.camera = None;
+        }
+
+        self.source = source;
+    }
+
+    pub fn handle_event(&mut self, event: FaceEvent) {
+        match event {
+            FaceEvent::CalibrateLower { frames } => {
+                self.calibrator.start_lower_calibration(frames as _)
+            }
+            FaceEvent::CalibrateUpper { shape, frames } => {
+                self.calibrator.start_upper_calibration(shape, frames as _)
+            }
+            FaceEvent::SetBounds {
+                shape,
+                lower,
+                upper,
+            } => {
+                self.calibrator.set_lower(shape, lower);
+                self.calibrator.set_upper(shape, upper);
+            }
+            FaceEvent::Capture { path } => self.capture = Some(path),
+        }
+    }
+
+    pub fn track(&mut self) -> Result<Option<FaceReport<'_>>, TrackerError> {
+        if !self.ensure_camera()? {
+            return Ok(None);
+        }
+
+        let camera = self.camera.as_mut().unwrap();
+
+        let raw_frame = match camera.get_frame() {
+            Ok(frame) => frame,
+            Err(CameraError::InvalidFrame(_)) => {
+                // TODO: Keep track of the amount of invalid frames
+                return Ok(None);
+            }
+            Err(e) => return Err(e.into()),
+        };
+
+        let processed_frame = self.preprocessor.process(raw_frame)?;
+
+        if let Some(capture) = &self.capture.take() {
+            if let Err(error) = processed_frame.image.save(capture) {
+                tracing::warn!(?error, "failed to save capture");
+            }
+        }
+
+        let Some(raw_weights) = self.pipeline.run(processed_frame)? else {
+            return Ok(None);
+        };
+
+        let filtered = self.filter.filter(raw_weights);
+        let weights = self.calibrator.calibrate(filtered);
+
+        Ok(Some(FaceReport {
+            raw_frame,
+            processed_frame,
+            weights,
+        }))
+    }
+
+    fn ensure_camera(&mut self) -> Result<bool, TrackerError> {
+        if self.camera.is_none() {
+            let Some(source) = &self.source else {
+                return Ok(false);
+            };
+
+            let mut camera =
+                MonoCamera::open(source).map_err(|e| TrackerError::Open(e.to_string()))?;
+
+            if let Some(sensor_config) = &self.sensor_config {
+                camera.set_sensor_config(sensor_config.clone());
+            }
+
+            self.camera = Some(camera);
+        }
+
+        Ok(true)
+    }
+}

@@ -1,0 +1,49 @@
+mod eye;
+mod face;
+
+pub use eye::{EyeCenter, EyeFusion, EyeShape};
+pub use face::{FaceShape, ManualFaceCalibrator};
+
+use serde::{Deserialize, Serialize};
+
+#[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[repr(C)]
+pub struct Bounds {
+    pub min: f32,
+    pub max: f32,
+    pub lower: f32,
+    pub upper: f32,
+}
+
+impl Bounds {
+    pub(crate) const fn new() -> Self {
+        Self {
+            min: 0.,
+            max: 0.,
+            lower: 0.,
+            upper: 0.,
+        }
+    }
+
+    pub(crate) const fn new_01() -> Self {
+        Self {
+            min: 0.,
+            max: 1.,
+            lower: 0.,
+            upper: 1.,
+        }
+    }
+
+    pub(crate) const fn new_11() -> Self {
+        Self {
+            min: -1.,
+            max: 1.,
+            lower: -1.,
+            upper: 1.,
+        }
+    }
+
+    pub(crate) const fn remap(&self, value: f32) -> f32 {
+        self.min + (value - self.lower) * (self.max - self.min) / (self.upper - self.lower)
+    }
+}

@@ -1,6 +1,4 @@
 use std::{
-    borrow::Cow,
-    cell::Cell,
     sync::mpsc::{self, Receiver, Sender},
     thread,
     thread::sleep,
@@ -9,23 +7,16 @@ use std::{
 
 use indicatif::MultiProgress;
 use snout::{
-    calibration::{EyeShape, FaceShape},
+    calibration::EyeShape,
     capture::discovery::{CameraInfo, query_cameras},
     config::Config,
-    control::{ControlEvent, OscControl},
+    control::{Control, ControlEvent, EyeEvent, FaceEvent},
     track::{eye::EyeTracker, face::FaceTracker, initialize_runtime, output::Output},
 };
 
-use crate::status::{Heartbeat, Pair, Rate, StatusBar, StatusBarItem};
+use crate::status::{Float, Heartbeat, Pair, Rate, StatusBar, Vector};
 
 const IDLE_RETRY: Duration = Duration::from_millis(10);
-
-/// A control command routed to the face worker.
-enum FaceEvent {
-    Bounds(FaceShape, f32, f32),
-    Calibrate,
-    CalibrateUpper(FaceShape, u32),
-}
 
 pub struct TrackCommand {
     config: Config,
@@ -43,16 +34,13 @@ impl TrackCommand {
         let cameras = query_cameras();
         let cameras = &cameras;
 
-        let (face_tx, face_rx) = mpsc::channel::<FaceEvent>();
+        let (face_tx, face_rx) = mpsc::channel();
+        let (eye_tx, eye_rx) = mpsc::channel();
 
         thread::scope(|scope| {
-            if let Some(control) = &self.config.control {
-                let listen = control.listen.clone();
-                scope.spawn(move || run_control(listen, face_tx));
-            }
-
+            scope.spawn(move || self.run_control(face_tx, eye_tx));
             scope.spawn(move || self.run_face(cameras, multi, face_rx));
-            scope.spawn(move || self.run_eye(cameras, multi));
+            scope.spawn(move || self.run_eye(cameras, multi, eye_rx));
         });
     }
 
@@ -72,20 +60,7 @@ impl TrackCommand {
 
         loop {
             while let Ok(event) = control.try_recv() {
-                match event {
-                    FaceEvent::Bounds(shape, lower, upper) => {
-                        tracker.calibrator.set_lower(shape, lower);
-                        tracker.calibrator.set_upper(shape, upper);
-                    }
-                    FaceEvent::Calibrate => {
-                        tracker.calibrator.start_calibration();
-                    }
-                    FaceEvent::CalibrateUpper(shape, frames) => {
-                        tracker
-                            .calibrator
-                            .start_upper_calibration(shape, frames as usize);
-                    }
-                }
+                tracker.handle_event(event);
             }
 
             match tracker.track().unwrap() {
@@ -104,7 +79,7 @@ impl TrackCommand {
     }
 
     /// Eye tracking worker: owns its tracker, output, and status line.
-    fn run_eye(&self, cameras: &[CameraInfo], multi: &MultiProgress) {
+    fn run_eye(&self, cameras: &[CameraInfo], multi: &MultiProgress, control: Receiver<EyeEvent>) {
         let mut tracker = EyeTracker::with_config(cameras, &self.config).unwrap();
         let mut output = Output::with_config(&self.config).unwrap();
 
@@ -113,33 +88,30 @@ impl TrackCommand {
         let tick_rate = status.add(Rate::new("TICK", 0));
 
         let eye_debug = self.eye_debug.then(|| {
-            let left = status.add(Gaze::new("L"));
-            let right = status.add(Gaze::new("R"));
+            let version = status.add(Vector::new("VERSION"));
+            let vergence = status.add(Float::new("VERGENCE"));
             let lids = status.add(Pair::new("LIDS"));
             let brow = status.add(Pair::new("BROW"));
             let widen = status.add(Pair::new("WIDEN"));
             let squint = status.add(Pair::new("SQUINT"));
-            (left, right, lids, brow, widen, squint)
+            (version, vergence, lids, brow, widen, squint)
         });
 
         loop {
+            while let Ok(event) = control.try_recv() {
+                tracker.handle_event(event);
+            }
+
             match tracker.track().unwrap() {
                 Some(report) => {
                     heartbeat.beat();
 
-                    if let Some((left, right, lids, brow, widen, squint)) = &eye_debug {
-                        left.set(
-                            report.weights.get(EyeShape::LeftEyePitch).unwrap_or(0.),
-                            report.weights.get(EyeShape::LeftEyeYaw).unwrap_or(0.),
-                        );
-                        right.set(
-                            report.weights.get(EyeShape::RightEyePitch).unwrap_or(0.),
-                            report.weights.get(EyeShape::RightEyeYaw).unwrap_or(0.),
-                        );
+                    if let Some((version, vergence, lids, brow, widen, squint)) = &eye_debug {
                         lids.set(
                             report.weights.get(EyeShape::LeftEyeLid).unwrap_or(0.),
                             report.weights.get(EyeShape::RightEyeLid).unwrap_or(0.),
                         );
+
                         brow.set(
                             report.weights.get(EyeShape::LeftEyeBrow).unwrap_or(0.),
                             report.weights.get(EyeShape::RightEyeBrow).unwrap_or(0.),
@@ -152,6 +124,13 @@ impl TrackCommand {
                             report.weights.get(EyeShape::LeftEyeSquint).unwrap_or(0.),
                             report.weights.get(EyeShape::RightEyeSquint).unwrap_or(0.),
                         );
+
+                        version.set(
+                            report.weights.get(EyeShape::EyePitchVersion).unwrap_or(0.),
+                            report.weights.get(EyeShape::EyeYawVersion).unwrap_or(0.),
+                        );
+
+                        vergence.set(report.weights.get(EyeShape::EyeYawVergence).unwrap_or(0.));
                     }
 
                     output.send_eyes(report.weights);
@@ -166,6 +145,46 @@ impl TrackCommand {
         }
     }
 
+    fn run_control(&self, face: Sender<FaceEvent>, eye: Sender<EyeEvent>) {
+        let Some(subconfig) = &self.config.control else {
+            tracing::info!("Control disabled");
+            return;
+        };
+
+        let mut control = match Control::bind(&subconfig.listen) {
+            Ok(control) => {
+                tracing::info!(listen = %subconfig.listen, "control listener started");
+                control
+            }
+            Err(error) => {
+                tracing::error!(%error, listen = %subconfig.listen, "failed to bind control listener");
+                return;
+            }
+        };
+
+        let mut running = true;
+
+        while running {
+            let result = control.receive(|event| match event {
+                ControlEvent::Face { event } => {
+                    if face.send(event).is_err() {
+                        running = false;
+                    }
+                }
+                ControlEvent::Eye { event } => {
+                    if eye.send(event).is_err() {
+                        running = false;
+                    }
+                }
+            });
+
+            if let Err(error) = result {
+                tracing::error!(%error, "control listener stopped");
+                break;
+            }
+        }
+    }
+
     /// Per-tick throttle, matching the single-loop behavior: sleep for the
     /// configured `interval` (skipped when it's 0), or 10ms by default.
     fn throttle(&self) {
@@ -176,75 +195,5 @@ impl TrackCommand {
         } else {
             sleep(Duration::from_millis(10));
         }
-    }
-}
-
-fn run_control(listen: String, face: Sender<FaceEvent>) {
-    let mut control = match OscControl::bind(&listen) {
-        Ok(control) => {
-            tracing::info!(listen = %listen, "control listener started");
-            control
-        }
-        Err(error) => {
-            tracing::error!(%error, listen = %listen, "failed to bind control listener");
-            return;
-        }
-    };
-
-    loop {
-        let event = match control.receive() {
-            Ok(event) => event,
-            Err(error) => {
-                tracing::error!(%error, "control listener stopped");
-                break;
-            }
-        };
-
-        let face_event = match event {
-            ControlEvent::FaceBounds(shape, lower, upper) => FaceEvent::Bounds(shape, lower, upper),
-            ControlEvent::FaceCalibrate => FaceEvent::Calibrate,
-            ControlEvent::FaceCalibrateUpper(shape, frames) => {
-                FaceEvent::CalibrateUpper(shape, frames)
-            }
-        };
-
-        if face.send(face_event).is_err() {
-            // Face worker has stopped; nothing left to control.
-            break;
-        }
-    }
-}
-
-/// Per-eye gaze readout, rendered as `L(+0.12,-0.34)`.
-struct Gaze {
-    side: &'static str,
-    pitch: Cell<f32>,
-    yaw: Cell<f32>,
-}
-
-impl Gaze {
-    fn new(side: &'static str) -> Self {
-        Self {
-            side,
-            pitch: Cell::new(0.0),
-            yaw: Cell::new(0.0),
-        }
-    }
-
-    fn set(&self, pitch: f32, yaw: f32) {
-        self.pitch.set(pitch);
-        self.yaw.set(yaw);
-    }
-}
-
-impl StatusBarItem for Gaze {
-    fn render(&self) -> Cow<'static, str> {
-        format!(
-            "{}({:+.2},{:+.2})",
-            self.side,
-            self.pitch.get(),
-            self.yaw.get()
-        )
-        .into()
     }
 }
